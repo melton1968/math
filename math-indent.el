@@ -101,6 +101,8 @@ means move backwards across COUNT lexical tokens.
 Return the cons (token-class . value) where token-class is one
 of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
 `:user-ident', `:sys-ident', `:operator', `:open', `:close'.
+
+The point is assumed not to be within a comment or string.
 "
 
   ;; If case-fold search is true, then upper and lower cases are not
@@ -108,39 +110,20 @@ of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
   ;; locally so that upper and lower cases can be distinguished. This
   ;; does not have any impact outside of this function.
   (let ((case-fold-search nil)) 
-    (let ((ppss (syntax-ppss)))
-      (cond 
-       
-       ;; Point is withing a string. If we are moving forward, back up
-       ;; to the beginning of the string so we can return it as a
-       ;; token and recurse. Otherwise, move to the end of the string 
-       ;; and so we can return it as a token and recurse.
-       ((nth 3 ppss) 
-	(math-forward-string (> count 0))
-	(math-forward-token count))
-       
-       ;; Point is within a comment. If we are moving forward, move to
-       ;; the end of the comment and recurse.  Otherwise, move to the
-       ;; beginning of the comment and recurse.
-       ((nth 4 ppss) 
-	(math-forward-comment (< count 0))
-	(math-forwaard-token count))
+    ;; Move past any white space.
+    (forward-comment (if (> count 0) (point-max) (-(point-max))))
 
-       ;; Point is not within a string or comment.
-       (t 
-	;; Move past any white space.
-	(forward-comment (if (> count 0) (point-max) -(point-max)))
-
-	;; The point is just before a token. Match the token to one of
-	;; the token classes described in the math-token-re-alist.
-	(catch 're-match
-	  (dolist (pair math-token-re-alist)
-	    (if (looking-at (cdr pair))
-		(progn
-		  (goto-char (match-end 0))
-		  (throw 're-match (cons (car pair) (match-string-no-properties 0))))))
-	  (cons :unknown "?")))))))
-  
+    ;; The point is just before a token. Match the token to one of
+    ;; the token classes described in the math-token-re-alist.
+    (catch 're-match
+      (let ((looking (if (> count 0) 'looking-at (lambda (re) (looking-back re (- (point) 2) t))))
+	    (match (if (> count 0) 'match-end 'match-beginning)))
+	(dolist (pair math-token-re-alist)
+	  (if (funcall looking (cdr pair))
+	      (progn
+		(goto-char (funcall match 0))
+		(throw 're-match (cons (car pair) (match-string-no-properties 0))))))
+	(cons :unknown "?")))))
 
 (defun math-context ()
   "The context at point: `:comment-context', `:string-context', `:code-context'"
@@ -175,10 +158,14 @@ of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
 	      (forward-char)
 	      (princ (format " %s " (buffer-substring-no-properties start (point)))))))))))
 
-
 (defun math-forward-token-command ()
   (interactive)
   (let ((pair (math-forward-token 1)))
+    (message "%s" pair)))
+
+(defun math-backward-token-command ()
+  (interactive)
+  (let ((pair (math-forward-token -1)))
     (message "%s" pair)))
 
 (provide 'math-indent)
