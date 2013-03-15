@@ -24,7 +24,7 @@
   "The regular expresion for a Mathematica syntax character.")
 
 (defconst math-string-re
-  "\""
+  "\"[^\"\\\\]*\\(?:\\\\.[^\"\\\\]*\\)*\""
   "The regular expression for the start of a Mathematica string.")
 
 (defconst math-open-brace-re
@@ -54,6 +54,17 @@
   (regexp-opt '("=" ":=" "," ";" ":" "::" "|" "-" "+" "*" "/"))
   "The regular expression for a Mathmatica operator.")
 
+(defconst math-token-re-alist
+  `((:user-ident . ,math-user-ident-re)
+   (:sys-ident . ,math-sys-ident-re)
+   (:number . ,math-number-re)
+   (:string . ,math-string-re)
+   (:open . ,math-open-brace-re)
+   (:close . ,math-close-brace-re)
+   (:operator . ,math-operator-re))
+  "Association list of token-class and regular expressions for
+  matching each type of token.")
+
 (defun math-forward-string (&optional backward)
   "Move point to the end of the string. If backward is not nil,
 move to the beginning of he string.
@@ -61,7 +72,7 @@ move to the beginning of he string.
 Assumes point is within a string.
 "
   ;; Move to the beginning of the string.
-  (goto-char (nth 7 (syntax-ppss)))
+  (goto-char (nth 8 (syntax-ppss)))
 
   ;; If we are not moving to the beginning of the string, move to the
   ;; end of the string.
@@ -119,53 +130,17 @@ of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
        (t 
 	;; Move past any white space.
 	(forward-comment (if (> count 0) (point-max) -(point-max)))
-	
-	;; The point is just before a token.
-	(cond
 
-	 ;; User identifier.
-	 ((looking-at math-user-ident-re)
-	  (goto-char (match-end 0))
-	  (cons :user-ident (match-string-no-properties 0)))
-	 
-	 ;; System identifier.
-	 ((looking-at math-sys-ident-re)
-	  (goto-char (match-end 0))
-	  (cons :sys-ident (match-string-no-properties 0)))
-	 
-	 ;; Number.
-	 ((looking-at math-number-re)
-	  (goto-char (match-end 0))
-	  (cons :number (match-string-no-properties 0)))
-	 
-	 ;; String.
-	 ((looking-at "\"")
-	  (forward-sexp)
-	  (cons :string "string"))
-
-	 ;; Symbol.
-	 ((looking-at math-symbol-re)
-	  (goto-char (match-end 0))
-	  (cons :number (match-string-no-properties 0)))
-
-	 ;; Open brace.
-	 ((looking-at math-open-brace-re)
-	  (goto-char (match-end 0))
-	  (cons :open (match-string-no-properties 0)))
-
-	 ;; Close brace.
-	 ((looking-at math-close-brace-re)
-	  (goto-char (match-end 0))
-	  (cons :close (match-string-no-properties 0)))
-	 
-	 ;; Operator.
-	 ((looking-at math-operator-re)
-	  (goto-char (match-end 0))
-	  (cons :operator (match-string-no-properties 0)))
-	 
-	 ;; Otherwise, we are at some unkown text or a paren so return nil
-	 (t (cons :unknown "?"))))))))
-
+	;; The point is just before a token. Match the token to one of
+	;; the token classes described in the math-token-re-alist.
+	(catch 're-match
+	  (dolist (pair math-token-re-alist)
+	    (if (looking-at (cdr pair))
+		(progn
+		  (goto-char (match-end 0))
+		  (throw 're-match (cons (car pair) (match-string-no-properties 0))))))
+	  (cons :unknown "?")))))))
+  
 
 (defun math-context ()
   "The context at point: `:comment-context', `:string-context', `:code-context'"
