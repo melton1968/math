@@ -3,7 +3,8 @@
 
 (defconst math-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [foo] 'math-do-foo)
+    (define-key map [?\C-i] 'math-indent-line)
+    (define-key map [?\C-c ?\C-f] 'forward-sexp)
     map)
   "Keymap for `math-mode'.")
 
@@ -21,6 +22,9 @@ The hook `math-mode-hook' is run with no args at mode initialization.
   (set (make-local-variable 'comment-start) "(*")
   (set (make-local-variable 'comment-end) "*)")
   (set (make-local-variable 'comment-use-syntax) t)
+
+  (set (make-local-variable 'parse-sexp-lookup-properties) t)
+  (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
   ;; We have to override the syntax-table to properly recognize
   ;; Mathmatica Syntax Characters as keywords.

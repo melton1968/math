@@ -1,17 +1,20 @@
 
-(*
+(*		
   Sample Mathematica source code file to test `math-mode'
   *)
 
 ClearAll[mxAnd, mxOr, mxInterval, mxMakeInterval, mxIntervalPlot, mxIntervalSymbol];
 
 mxMakeInterval::badarg = "The expression `` is not a relational operator (Inequality|Less|LessEqual|GreaterEqual|Greater) nor a logical Or of relational operators.";
+"adfadf
+adfadf
+adf"
 
 (*
   Less[x,a] and LessEqual[x,a]
   x <  a
   x <= a 
-  *)
+  *) 
 mxMakeInterval[(rop:(Less|LessEqual))[var_, value_]] :=
     mxInterval[LessEqual, -\[Infinity], value, rop];
 
