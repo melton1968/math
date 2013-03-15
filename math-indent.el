@@ -167,8 +167,5 @@ of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
   (let ((pair (math-forward-token 1)))
     (message "%s" pair)))
 
-(define-key math-mode-map "\C-c\C-f" 'math-forward-token-command)
-(define-key math-mode-map "\C-c\C-r" 'boo)
-
 (provide 'math-indent)
 

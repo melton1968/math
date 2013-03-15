@@ -1,10 +1,11 @@
 
 (require 'math-syntax)
+(require 'math-indent)
 
 (defconst math-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map [?\C-i] 'math-indent-line)
-    (define-key map [?\C-c ?\C-f] 'forward-sexp)
+    (define-key map [?\C-c ?\C-f] 'math-forward-token-command)
     map)
   "Keymap for `math-mode'.")
 
