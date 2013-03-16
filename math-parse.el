@@ -1,7 +1,7 @@
 
 (require 'math-token)
 
-(defconst math-parser-symbol-table (make-hash-table :test 'equal)
+(defconst math-parser-table (make-hash-table :test 'equal)
   "The parser symbol table.
 
 Each entry in the symbol table corresponds to a type of token
@@ -15,9 +15,9 @@ that can be returned from the tokenizer.
   "The current parser token.")
 
 (defun math-symbol (id &optional bp nud led)
-  (let ((symbol (gethash id math-symbol-table)))
+  (let ((symbol (gethash id math-parser-table)))
     (unless symbol
-      (puthash id (list id bp nud led) math-symbol-table))
+      (puthash id (list id bp nud led) math-parser-table))
     symbol))
 
 (defun math-symbol-infix (id bp &optional led)
@@ -35,8 +35,6 @@ that can be returned from the tokenizer.
 	  (setq left (funcall (nth 3 (math-symbol last-token)) left)))
 	left))))
 
-(defun math-next-token ()
-
 (math-symbol "number")
 (math-symbol "string")
 (math-symbol-infix "+" 20)
@@ -48,13 +46,4 @@ that can be returned from the tokenizer.
 (math-symbol "+")
 (math-symbol "-")
 
-
-
-
-(defun expression (&optional right-precedence)
-  (let ((next-token (math-forward-token))
-	(left = (nud token)))
-    (while (< right-precedence (left-precedence token))
-      token = next-token
-      (setq next-token (math-forward-token))
-      (setq left (led token left)))))
+(provide 'math-parse)

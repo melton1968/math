@@ -10,19 +10,19 @@
     )
   "The Mathematica operators with precedence information.")
 
-(defconst math-comment-start-re
+(defconst math-comment-start
   "(\*"
-  "The regular expression for a Mathematica start comment delimiter.")
+  "The Mathematica start comment delimiter.")
 
-(defconst math-comment-end-re
+(defconst math-comment-end
   "\*)"
-  "The regular expression for a Mathematica end comment delimiter.")
+  "The Mathematica end comment delimiter.")
 
-(defconst math-user-ident-re
+(defconst math-user-name-re
   "[a-zA-Z0-9_]+"
   "The regular expression for a Mathmatica user identifier.")
 
-(defconst math-sys-ident-re
+(defconst math-system-name-re
   "[A-Z][a-zA-Z]*"
   "The regular expression for a Mathmatica system identifier.")
 
@@ -34,13 +34,9 @@
   "\"[^\"\\\\]*\\(?:\\\\.[^\"\\\\]*\\)*\""
   "The regular expression for the start of a Mathematica string.")
 
-(defconst math-open-brace-re
-  "\\[\\|(\\|{"
-  "The regular expression for a Mathematica open brace.")
-
-(defconst math-close-brace-re
-  "\\]\\|)\\|}"
-  "The regular expression for a Mathematica close brace.")
+(defconst math-brace-re
+  "\\[\\|(\\|{\\|\\]\\|)\\|}"
+  "The regular expression for a Mathematica brace.")
 
 (defconst math-number-re
   ;; Taken from http://reference.wolfram.com/mathmatica/tutorial/InputSyntax.html#7977
@@ -62,13 +58,13 @@
   "The regular expression for a Mathmatica operator.")
 
 (defconst math-token-re-alist
-  `((:user-ident . ,math-user-ident-re)
-   (:sys-ident . ,math-sys-ident-re)
-   (:number . ,math-number-re)
-   (:string . ,math-string-re)
-   (:open . ,math-open-brace-re)
-   (:close . ,math-close-brace-re)
-   (:operator . ,math-operator-re))
+  `(((:literal  :number) . ,math-number-re)
+    ((:literal  :string) . ,math-string-re)
+    ((:name     :user)   . ,math-user-name-re)
+    ((:name     :system) . ,math-system-name-re)
+    ((:operator :group)  . ,math-brace-re)
+    ((:operator :symbol) . ,math-symbol-re)
+    ((:operator :base)   . ,math-operator-re))
   "Association list of token-class and regular expressions for
   matching each type of token.")
 
