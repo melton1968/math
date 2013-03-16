@@ -104,7 +104,6 @@ of: `:comment-start', `:comment-end', `:symbol', `:number', `:string',
 
 The point is assumed not to be within a comment or string.
 "
-
   ;; If case-fold search is true, then upper and lower cases are not
   ;; distinguishable in regular expressions. We set it to false
   ;; locally so that upper and lower cases can be distinguished. This
@@ -116,7 +115,7 @@ The point is assumed not to be within a comment or string.
     ;; The point is just before a token. Match the token to one of
     ;; the token classes described in the math-token-re-alist.
     (catch 're-match
-      (let ((looking (if (> count 0) 'looking-at (lambda (re) (looking-back re (- (point) 2) t))))
+      (let ((looking (if (> count 0) 'looking-at (lambda (re) (looking-back re (point-min) t))))
 	    (match (if (> count 0) 'match-end 'match-beginning)))
 	(dolist (pair math-token-re-alist)
 	  (if (funcall looking (cdr pair))
