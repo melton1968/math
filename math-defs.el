@@ -50,7 +50,7 @@
   ;;     number`s              - number in precision s
   ;;     number``s             - number in precision s
   ;;
-  "[+-]?[0-9]*\\.?[0-9]+"
+  "[0-9]*\\.?[0-9]+"
   "The regular expression for a Mathmatica number.")
 
 (defconst math-operator-re

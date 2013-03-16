@@ -66,7 +66,8 @@ The point is assumed not to be within a comment or string.
   ;; distinguishable in regular expressions. We set it to false
   ;; locally so that upper and lower cases can be distinguished. This
   ;; does not have any impact outside of this function.
-  (let ((case-fold-search nil)) 
+  (let ((case-fold-search nil)
+	(count (or count 1)))
     ;; Move past any white space.
     (forward-comment (if (> count 0) (point-max) (-(point-max))))
     
@@ -79,7 +80,6 @@ The point is assumed not to be within a comment or string.
 	  (if (funcall looking (cdr pair))
 	      (progn
 		(goto-char (funcall match 0))
-		;; FIXME - Need to return an association list here.
 		(throw 're-match 
 		       (list (cons :class (caar pair))
 			     (cons :sub-class (cadar pair))
