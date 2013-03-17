@@ -57,15 +57,30 @@
   (regexp-opt '("=" ":=" "," ";" ":" "::" "|" "-" "+" "*" "/" "^"))
   "The regular expression for a Mathmatica operator.")
 
+(defconst math-token-number ":number"
+  "The token identifier representing a number.")
+
+(defconst math-token-string ":string"
+  "The token identifier representing a string.")
+
+(defconst math-token-name ":name"
+  "The token identifier representing a name.")
+
+(defconst math-token-eof ":eof"
+  "The token identifier representing the end of the input.")
+
+(defconst math-token-unknown ":unknown"
+  "The token identifier representing an unknown token.")
+
 (defconst math-token-re-alist
-  `(((:literal  :number) . ,math-number-re)
-    ((:literal  :string) . ,math-string-re)
-    ((:name     :user)   . ,math-user-name-re)
-    ((:name     :system) . ,math-system-name-re)
-    ((:operator :group)  . ,math-brace-re)
-    ((:operator :symbol) . ,math-symbol-re)
-    ((:operator :base)   . ,math-operator-re))
-  "Association list of token-class and regular expressions for
+  `((,math-token-number . ,math-number-re)
+    (,math-token-string . ,math-string-re)
+    (,math-token-name   . ,math-user-name-re)
+    (,math-token-name   . ,math-system-name-re)
+    (:operator         . ,math-brace-re)
+    (:operator         . ,math-symbol-re)
+    (:operator         . ,math-operator-re))
+  "Association list of token-id and regular expressions for
   matching each type of token.")
 
 (provide 'math-defs)

@@ -1,16 +1,20 @@
 
 (require 'math-token)
 
-(defconst math-parser-table (make-hash-table :test 'equal)
-  "The parser symbol table.
-
-Each entry in the parser table is an alist with the
-`:parse-prefix' and `:parse-index' functions (or nil) for the
-given symbol.
-")
-
 (defconst math-parser-token nil
   "The current parser token.")
+
+(defconst math-parser-table (make-hash-table :test 'equal)
+  "The parser property table. 
+
+The property table has an entry for each possible token
+identifier, i.e. `(number)', `(string)', `(name)', `(eof)', 
+`(unknown)', and each operator.
+
+Each entry contains an association list for that
+identifier with the identifier's `:left-binding-power', `:prefix'
+parse function and `:infix' parse function.
+")
 
 (defun math-parser-table-put (identifier &optional new-properties)
   "Add new-properties to identifier's properties, adding
@@ -32,66 +36,91 @@ identifier to the parser-table if necessary."
   "Return the value of property for indentifier from the parser-table."
   (cdr (assoc property (gethash identifier math-parser-table))))
 
+;;;; The default parse methods for literal, infix-left, prefix.
+;;;;
 (defun math-parser-default-parse-literal (token)
-  `(,(cdr (assoc :sub-class token)) ,(cdr (assoc :value token))))
+  "Parse a literal token into `(token-type value)'"
+  `(,(cdr (assoc :identifier token)) ,(cdr (assoc :value token))))
 
-(defun math-parser-literal (identifier &optional parse-prefix)
-  (math-parser-table-put identifier '((:parse-prefix . math-parser-default-parse-literal))))
+(defun math-parser-default-parse-infix-left (left-expression token)
+  "Parse a left associaive infix operator into `(operator (sub-expr) (sub-expr))'"
+  `(,(cdr (assoc :value token))
+    ,left-expression
+    ,(math-parser-parse (cdr (assoc :left-binding-power token)))))
 
-(defun math-parser-default-infix-left (left-expression token)
-  (list 
-   (cdr (assoc :value token))
-   left-expression 
-   (math-parser-parse (math-parser-table-property :left-binding-power (assoc :identifier token)))))
+;;;; Methods for adding identifiers for literals, names, and operators to the parse table.
+;;;;
+(defun math-parser-id-literal (identifier &optional prefix)
+  "Add the given literal identifier to the parse table."
+  (math-parser-table-put 
+   identifier 
+   `((:prefix             . ,(or prefix 'math-parser-default-parse-literal))
+     (:left-binding-power . 0))))
 
-(defun math-parser-infix-left (identifier left-binding-power &optional parse-infix)
-  (let ((lbp-pair (list (cons :left-binding-power left-binding-power)))
-	(pi-pair (list (cons :parse-infix (or parse-infix 'math-parser-default-infix-left)))))
-    (math-parser-table-put identifier lbp-pair)
-    (math-parser-table-put identifier pi-pair)))
+(defun math-parser-id-infix-left (identifier left-binding-power &optional infix)
+  "Add the given infix identifier to the parse table."
+  (math-parser-table-put 
+   identifier
+   `((:left-binding-power . ,left-binding-power)
+     (:infix              . ,(or infix 'math-parser-default-parse-infix-left)))))
 
-(defun math-parser-token-identifier (token)
-  (let ((class (cdr (assoc :class token)))
-	 (sub-class (cdr (assoc :sub-class token)))
-	 (value (cdr (assoc :value token))))
-    (cond
-     ((equal sub-class :number) "number")
-     ((equal sub-class :string) "string")
-     ((equal class :name) "name")
-     ((equal class :operator) value)
-     ((equal class :eof) "eof")
-     ((equal class :unknown) "unknown"))))
-	
+
+;;;; The core parsing methods.
+;;;;	
+(defun math-parser-token-property (property)
+  (cdr (assoc property math-parser-token)))
+
 (defun math-parser-next-token ()
-  (let* ((token (math-forward-token))
-	 (identifier (math-parser-token-identifier token)))
-      (setq math-parser-token (append (list (cons :identifier identifier)) token))))
+  "Get the next token and set its shared properties based on the parser table."
+  (let* ((token (math-next-token))
+	 (shared-properties (gethash (cdr (assoc :identifier token)) math-parser-table)))
+    (setcdr (last token) shared-properties)
+    (setq math-parser-token token)))
+
+(defun math-parser-peek-token-property (property)
+  (let* ((token (math-peek-token))
+	 (shared-properties (gethash (cdr (assoc :identifier token)) math-parser-table)))
+    (cdr (assoc property shared-properties))))
+  
 
 (defun math-parser-parse (right-binding-power)
+  ;; Get the first token of the current expression.
   (math-parser-next-token)
-  (message "parse(pre-prefix) token: %s" math-parser-token)
 
-  (let ((identifier (cdr (assoc :identifier math-parser-token))))
-    (let ((parse-prefix (math-parser-table-property identifier :parse-prefix)))
-      (unless parse-prefix 
-	(error "No parse-prefix associated with identifier %s for token %s" 
-	       identifier math-parser-token))
-      (let ((left-expression (funcall parse-prefix math-parser-token)))
+  ;; Get the prefix function for parsing the current token. Since this
+  ;; the first token, there must be a prefix function.
+  (let ((prefix (math-parser-token-property :prefix)))
+      (unless prefix 
+	(error "No prefix function for token %s" math-parser-token))
 
-	(message "parse(after-prefix) left-expr: %s" left-expression)
+      ;; Apply the prefix function to get the parsed left sub-expression.
+      (let ((left-expression (funcall prefix math-parser-token)))
 
-	(math-parser-next-token)
-	(message "parse(pre-infix) token: %s" math-parser-token)
+	;; 
+	(message "token %s" (math-peek-token))
+	(message "right-binding-power %d" right-binding-power)
+	(message "left-binding-power  %d" (math-parser-peek-token-property :left-binding-power))
+	(while (< right-binding-power (math-parser-peek-token-property :left-binding-power))
 
-	(let ((identifier (cdr (assoc :identifier math-parser-token))))
-	  (let ((parse-infix (math-parser-table-property identifier :parse-infix)))
+	  ;; Get the next token, which must be an infix operator since
+	  ;; we just parsed the left-subexpression.
+	  (math-parser-next-token)
 
-	    (if parse-infix
-		(let ((new-expression (funcall parse-infix left-expression math-parser-token)))
-		      (message "parse(after-infix/t) left-expr: %s" new-expression)
-		      new-expression)
-	      (message "parse(after-infix/nil) left-expr: %s" left-expression)
-	      left-expression)))))))
+	  ;; Gett the infix function for parsing the current
+	  ;; token. Since we just parsed the left sub-expression, there
+	  ;; must be an infix function (unless we have reached a special
+	  ;; end of expression operator which has a null infix function).
+	  (let ((infix (math-parser-token-property :infix)))
+	    (unless infix
+	      (error "No infix function for token %s" math-parser-token))
+
+	    (setq left-expression (funcall infix left-expression math-parser-token)))
+	  (message "token %s" (math-peek-token))
+	  (message "left-binding-power  %d" (math-parser-peek-token-property :left-binding-power))
+	  )
+
+	left-expression)))
+	    
 
 (defun math-parse ()
   (save-excursion
@@ -102,17 +131,19 @@ identifier to the parser-table if necessary."
   (interactive)
   (message "math-parse: %s" (math-parse)))
 
-(math-parser-literal "number")
-(math-parser-literal "string")
-;;(math-parser-name "name")
+(math-parser-id-literal math-token-number)
+(math-parser-id-literal math-token-string)
+(math-parser-id-literal math-token-eof)
+
+;;(math-parser-name math-token-name)
 
 ;;(math-parser-prefix "+")
 ;;(math-parser-prefix "-")
 
-(math-parser-infix-left "+" 20)
-;;(math-parser-infix-left "-" 20)
-;;(math-parser-infix-left "*" 30)
-;;(math-parser-infix-left "/" 30)
-;;(math-parser-infix-left "^" 40)
+(math-parser-id-infix-left "+" 20)
+(math-parser-id-infix-left "-" 20)
+(math-parser-id-infix-left "*" 30)
+(math-parser-id-infix-left "/" 30)
+;;(math-parser-id-infix-right "^" 40)
 
 (provide 'math-parse)
