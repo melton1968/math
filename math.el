@@ -7,7 +7,7 @@
     (define-key map [?\C-i] 'math-indent-line)
     (define-key map [?\C-c ?\C-f] 'math-next-token-command)
     (define-key map [?\C-c ?\C-b] 'math-prev-token-command)
-    (define-key map [?\C-c ?\C-p] 'math-parse-command)
+    (define-key map [?\C-c ?\C-p] 'math-parse-buffer-command)
     map)
   "Keymap for `math-mode'.")
 
