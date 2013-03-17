@@ -1,5 +1,6 @@
 
 (require 'math-defs)
+(require 'math-util)
 
 (defun math-start-of-string (&optional backward)
   "If point is inside of a string, move point to the start of the string.
@@ -70,22 +71,16 @@ and token-value is the verbatim text from which the token was derived."
 	  (if (funcall looking (cdr pair))
 	      (progn
 		(goto-char (funcall match 0))
-		(throw 're-match 
-		       (let ((string (match-string-no-properties 0))
-			     (use-string-as-id (equal :operator (car pair))))
-			 `((:identifier . ,(if use-string-as-id string (car pair)))
-			   (:value . ,string))))))))
+		(throw 're-match `(,(car pair) . ,(match-string-no-properties 0)))))))
 
       ;; If we are at the end of the buffer, return the end token.
       (if (= (point) (point-max))
-	  `((:identifier . ,math-token-eof)
-	    (:value      . ,math-token-eof))
+	  `(,math-token-eof . ,math-token-eof)
 	;; Otherwise, we did not recognize the token. Move forward one
 	;; character so we do not get stuck and then return the
 	;; unrecognized token.
 	(forward-char 1)
-	`((:identifier . ,math-token-unknown)
-	  (:value     . ,(string (char-before (point)))))))))
+	`(,math-token-unknown . ,(string (char-before (point))))))))
 
 (defun math-peek-token (&optional backward)
   "Same as math-next-token except the token is not consumed."
