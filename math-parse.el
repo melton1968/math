@@ -25,22 +25,69 @@
 (defun math-get-table (key table)      
   (gethash key table))
 
-;; Parse methods for literal, infix-left, prefix.
+;; Prefix parse methods.
 ;;
-(defun math-parse-prefix-literal (token)
-  "Parse a literal token into `value'."
-  (math-token-src token))
+;; A symbol's prefix parse method is invoked if it is the first token
+;; read by parse-expression. The method is passed the current token
+;; and returns an expression.
 
+;; Parse `operator expression' --> (operator expression)
+;; token: operator
 (defun math-parse-prefix (token)
-  "Parse a prefix operator into `(operator expression)'"
   `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
 
-(defun math-parse-open-paren (token)
-  "Parse an open paren into `(expression)'."
-  (let ((subexpr (math-parse-expression 0)))
-    (math-parser-expect-closer ")")
-    subexpr))
+;; Parse `literal' --> value
+;; token: literal
+(defun math-parse-prefix-literal (token)
+  (math-token-src token))
 
+;; Parse `(expr1)' --> expr1
+;; token: `('
+(defun math-parse-prefix-paren-group (token)
+  (let ((expression (math-parse-expression 0)))
+    (math-parser-expect-closer ")")
+    expression))
+
+;; Infix parse methods.
+;;
+;; A symbol's infix parse methhod is invoked if it is the nth token
+;; read by parse-expression where n is even. The method is passed the
+;; currently built up left-expression and the current token and
+;; returns an expression.
+;;
+
+;; Parse `expr1 operator expr2' --> (operator expr1 expr2)
+;; token: operator (left associative)
+(defun math-parse-infix-left (left-expression token)
+  `(,(math-token-id token)
+    ,left-expression
+    ,(math-parse-expression (math-token-infix-left-bp token))))
+
+;; Parse `expr1 operator expr2' --> (operator expr1 expr2)
+;; token: operator (right associative)
+(defun math-parse-infix-right (left-expression token)
+  `(,(math-token-id token)
+    ,left-expression
+    ,(math-parse-expression (- (math-token-infix-left-bp token) 1))))
+
+;; Parse `name[expr1,expr2,...]' --> (name expr1 expr2 ...).
+;; left-expression: name
+;; token: `['
+(defun math-parse-infix-sequence (left-expression token)
+  (let ((sequence `(,left-expression)))
+    (while (not (equal (math-parser-peek-infix-id) "]"))
+      (let ((expression (math-parse-expression 0)))
+	(math-append-to-list sequence expression))
+      (if (equal (math-parser-peek-infix-id) ",")
+	  (math-parser-expect-separator ",")))
+    (math-parser-expect-closer "]")
+    sequence))
+
+;; Parse `expr1 operator expr2 ...' --> (operator expr1 expr2 ...)
+;; token: operator
+;;
+;; This is used to parse flat operators, i.e. operators that a
+;; variable number of expressions.
 (defun math-parse-infix-non (left-expression token)
   "Parse a non-associative infix operator into `(operator (sub-expr) (sub-expr) ...)'."
   (let ((right-expression (math-parse-expression (math-token-infix-left-bp token))))
@@ -49,19 +96,6 @@
 	(math-parser-advance-token)
 	(math-append-to-list expressions (math-parse-expression (math-token-infix-left-bp token))))
       (cons (math-token-id token) expressions))))
-
-(defun math-parse-infix-left (left-expression token)
-  "Parse a left associaive infix operator into `(operator (sub-expr) (sub-expr))'"
-  `(,(math-token-id token)
-    ,left-expression
-    ,(math-parse-expression (math-token-infix-left-bp token))))
-
-(defun math-parse-infix-right (left-expression token)
-  "Parse a right associaive infix operator into `(operator (sub-expr) (sub-expr))'"
-  `(,(math-token-id token)
-    ,left-expression
-    ,(math-parse-expression (- (math-token-infix-left-bp token) 1))))
-
 
 ;; Methods for registering identifiers in the parser tables.
 ;;
@@ -129,6 +163,11 @@
 (defun math-parser-expect-closer (closer)
   (let ((token (math-next-token)))
     (unless (and (equal (car token) :operator) (equal (cdr token) closer))
+      (error "Exepcted matching %s but read %s instead" closer (cdr token)))))
+
+(defun math-parser-expect-separator (closer)
+  (let ((token (math-next-token)))
+    (unless (and (equal (car token) :operator) (equal (cdr token) closer))
       (error "Exepcted %s but read %s instead" closer (cdr token)))))
   
 (defun math-parse-expression (right-bp)
@@ -174,8 +213,11 @@
 (math-register-literal math-token-number)
 (math-register-literal math-token-string)
 
-
 ;;(math-parser-name math-token-name)
+
+;; name[expr1,expr2,...]
+;;
+(math-register-symbol-infix "[" 745 'math-parse-infix-sequence)
 
 ;; Unary mathematical operators
 ;;
@@ -190,10 +232,9 @@
 (math-register-infix-left "/" 480)
 (math-register-infix-right "^" 590)
 
-;; Openers and closers
+;; Grouping operator.
 ;;
 (math-register-symbol-prefix "(" 100 'math-parse-open-paren)
-(math-register-symbol-infix ")" 0 nil)
 
 ;; expr>>filename      --> Put[expr,"filename"]
 ;; expr>>>filename     --> PutAppend[expr,"filename"]
@@ -210,6 +251,11 @@
 ;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
 (math-register-infix-right "\\`" 10)
 
+;; Separators and Closers need to be registered, but do not have any
+;; associated precedence or parsing funtions.
+(math-register-symbol ",")
+(math-register-symbol "]")
+(math-register-symbol ")")
 
 (defun math-parse-buffer-command ()
   (interactive)
