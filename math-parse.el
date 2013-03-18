@@ -21,8 +21,8 @@
 ;; expr := expr '+' expr          // '+' is an infix operator
 ;;
 ;; TDOP divides the operators in the above operators into three
-;; catergories: null denominator, left expression denominator and
-;; `closer'. In much of the literature, the denominator terms are
+;; catergories: null denotation, left expression denotation and
+;; `closer'. In much of the literature, the denotation terms are
 ;; abbreviated as `nud' and `led' respectively.
 ;;
 ;; The prefix '+' and the matchfix '(' are considered null denominator
@@ -30,7 +30,7 @@
 ;; that context.
 ;;
 ;; The postfix '++' and infix '+' are considered left expression
-;; denominator operators because there is a 'left hand side' to which
+;; denotation operators because there is a 'left hand side' to which
 ;; the operator applies.
 ;;
 ;; Even thought the matchfix ')' has an expression on the left, it is
@@ -44,7 +44,7 @@
 ;; Sometimes `ned' and `led' are refered to as prefix and infix, but that
 ;; is really a misnomer and can lead to confusion. The terms prefix,
 ;; infix and postfix describe a different dimension about an operator
-;; than the terms null denominator and left expression denominator.
+;; than the terms null denonation and left expression denotation.
 ;;
 ;; The other important TDOP term is binding power which is related to
 ;; the precedence and associativity of an operator. Each operator has
@@ -103,7 +103,7 @@
   (let* ((pair (math-peek-token))
 	 (id (math-token-id (math-token-make-instance pair)))
 	 (bp (math-get-table id math-led-left-bp-table)))
-    (if bp bp (error "error: Unknown operator %s." id)))) 
+    (if bp bp (error "error: No left binding power for operator `%s'." id))))
 
 (defun math-parser-peek-led-id ()
   "The id of next token to be read."
@@ -150,28 +150,45 @@
 	    
 
 (defun math-parse-buffer ()
+  (interactive)
   (save-excursion
     (goto-char (point-min))
-    (math-parse-expression 0)))
+    (with-output-to-temp-buffer "*math-parse-output*"
+      (princ (math-parse-expression 0)))))
+
+(defun math-parse-region (begin end)
+  (interactive "r")
+  (save-excursion
+    (save-restriction
+      (narrow-to-region begin end)
+      (goto-char (point-min))
+      (let ((input (buffer-string)))
+	(with-output-to-temp-buffer "*math-parse-output*"
+	  (princ "Input:\n\n")
+	  (princ input)
+	  (princ "\n\n")
+	  (princ "Parse:\n\n")
+	  (princ (math-parse-expression 0)))))))
+
 
 ;; Operator Definitions.
 ;;
 
 ;; Literals
 ;;
-(math-register-literal math-token-number)
-(math-register-literal math-token-string)
+(math-register-nud math-token-number 0 'math-parse-nud-literal)
+(math-register-nud math-token-string 0 'math-parse-nud-literal)
 
 ;;(math-parser-name math-token-name)
 
 ;; name[expr1,expr2,...]
 ;;
-(math-register-symbol-led "[" 745 'math-parse-led-sequence)
+(math-register-led "[" 745 'math-parse-led-sequence)
 
 ;; Unary mathematical operators
 ;;
-(math-register-nud "+" 490)
-(math-register-nud "-" 490)
+(math-register-nud-prefix "+" 490)
+(math-register-nud-prefix "-" 490)
 
 ;; Binary mathematical operators
 ;;
@@ -183,7 +200,7 @@
 
 ;; Grouping operator.
 ;;
-(math-register-symbol-nud "(" 100 'math-parse-open-paren)
+(math-register-nud "(" 100 'math-parse-nud-paren)
 
 ;; expr>>filename      --> Put[expr,"filename"]
 ;; expr>>>filename     --> PutAppend[expr,"filename"]
@@ -202,13 +219,13 @@
 
 ;; Separators and Closers need to be registered, but do not have any
 ;; associated precedence or parsing funtions.
-(math-register-symbol math-token-eof)
 (math-register-symbol ",")
 (math-register-symbol "]")
 (math-register-symbol ")")
 
-(defun math-parse-buffer-command ()
-  (interactive)
-  (message "math-parse: %s" (math-parse-buffer)))
+;; The eof marker is a special closer.
+(math-register-nud math-token-eof 0 'math-parse-nud-eof)
+(math-register-led math-token-eof 0 nil)
+
 
 (provide 'math-parse)

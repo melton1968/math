@@ -28,37 +28,28 @@
   (math-put-table identifier 0 math-nud-left-bp-table)
   (math-put-table identifier 0 math-led-left-bp-table))
 
-(defun math-register-symbol-nud (identifier bp fn)
+(defun math-register-nud (identifier bp fn)
   (math-put-table identifier bp math-nud-left-bp-table)
   (math-put-table identifier fn math-nud-fn-table))
 
-(defun math-register-symbol-led (identifier bp fn)
+(defun math-register-nud-prefix (identifier left-bp)
+  (math-put-table identifier 'math-parse-nud-prefix math-nud-fn-table)
+  (math-put-table identifier left-bp math-nud-left-bp-table))
+
+(defun math-register-led (identifier bp fn)
   (math-put-table identifier bp math-led-left-bp-table)
   (math-put-table identifier fn math-led-fn-table))
 
-(defun math-register-literal (identifier &optional nud)
-  "Add the given literal identifier to the parser tables."
-  (math-put-table identifier (or nud 'math-parse-nud-literal) math-nud-fn-table)
-  (math-put-table identifier 0 math-nud-left-bp-table))
-
-(defun math-register-nud (identifier left-bp &optional nud)
-  "Add the given nud identifier to the parser tables."
-  (math-put-table identifier (or nud 'math-parse-nud) math-nud-fn-table)
-  (math-put-table identifier left-bp math-nud-left-bp-table))
-
-(defun math-register-led-flat (identifier left-bp &optional led)
-  "Add the given led identifier to the parser tables."
-  (math-put-table identifier (or led 'math-parse-led-flat) math-led-fn-table)
+(defun math-register-led-flat (identifier left-bp)
+  (math-put-table identifier 'math-parse-led-flat math-led-fn-table)
   (math-put-table identifier left-bp math-led-left-bp-table))
 
-(defun math-register-led-left (identifier left-bp &optional led)
-  "Add the given led identifier to the parser tables."
-  (math-put-table identifier (or led 'math-parse-led-left) math-led-fn-table)
+(defun math-register-led-left (identifier left-bp)
+  (math-put-table identifier 'math-parse-led-left math-led-fn-table)
   (math-put-table identifier left-bp math-led-left-bp-table))
 
-(defun math-register-led-right (identifier left-bp &optional led)
-  "Add the given led identifier to the parser tables."
-  (math-put-table identifier (or led 'math-parse-led-right) math-led-fn-table)
+(defun math-register-led-right (identifier left-bp)
+  (math-put-table identifier 'math-parse-led-right math-led-fn-table)
   (math-put-table identifier left-bp math-led-left-bp-table))
 
 

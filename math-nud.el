@@ -12,7 +12,7 @@
 
 ;; Parse `operator expression' --> (operator expression)
 ;; token: operator
-(defun math-parse-nud (token)
+(defun math-parse-nud-prefix (token)
   `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
 
 ;; Parse `literal' --> value
@@ -26,5 +26,10 @@
   (let ((expression (math-parse-expression 0)))
     (math-parser-expect-closer ")")
     expression))
+
+;; Parse eof --> nil
+;; token: eof
+(defun math-parse-nud-eof (token)
+  nil)
 
 (provide 'math-nud)
