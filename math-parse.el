@@ -1,140 +1,90 @@
 
+
+;;;; 0. Parser ;;;;
+;;
+;; The parser uses a top-down operator precedence (TDOP) parsing
+;; methodology. For background see the following:
+;;
+;; http://javascript.crockford.com/tdop/tdop.html
+;; http://effbot.org/zone/simple-top-down-parsing.htm
+;; http://journal.stuffwithstuff.com/2011/03/19/pratt-parsers-expression-parsing-made-easy/
+;; http://eli.thegreenplace.net/2010/01/02/top-down-operator-precedence-parsing/
+;;
+;;;; 1. Terminology ;;;;
+;;
+;; Consider the following simple expression grammar.
+;;
+;; expr := number                 // a literal number
+;; expr := '+' expr               // '+' is a prefix operator
+;; expr := '(' expr ')'           // '(' and ')' are matchfix operators
+;; expr := expr '++'              // '++' is a postfix operator
+;; expr := expr '+' expr          // '+' is an infix operator
+;;
+;; TDOP divides the operators in the above operators into three
+;; catergories: null denominator, left expression denominator and
+;; `closer'. In much of the literature, the denominator terms are
+;; abbreviated as `nud' and `led' respectively.
+;;
+;; The prefix '+' and the matchfix '(' are considered null denominator
+;; operators because there is no 'left hand side' for the operator in
+;; that context.
+;;
+;; The postfix '++' and infix '+' are considered left expression
+;; denominator operators because there is a 'left hand side' to which
+;; the operator applies.
+;;
+;; Even thought the matchfix ')' has an expression on the left, it is
+;; considered a closer since it follows the last non-terminal in the production.
+;;
+;; Only the `nud' and `led' operators have associated parse function
+;; that are displatched when they are read as tokens. The `closer'
+;; operators are simply required to be read at the correct time but do
+;; not have any associated parse function.
+;;
+;; Sometimes `ned' and `led' are refered to as prefix and infix, but that
+;; is really a misnomer and can lead to confusion. The terms prefix,
+;; infix and postfix describe a different dimension about an operator
+;; than the terms null denominator and left expression denominator.
+;;
+;; The other important TDOP term is binding power which is related to
+;; the precedence and associativity of an operator. Each operator has
+;; both a left binding power and a right binding power. 
+;;
+;; The left binding power is how strongly the operator binds to the
+;; preceeding term and the right binding power is how strongly the
+;; operator binds to the succeeding term. The binding power is used to
+;; control both operator precedence and associativity.
+;; 
+;;;; 2. Algorithm ;;;;
+;;
+;; The following pseudo-code describes the basic parsing
+;; algorithm.
+;;
+;; parse-expression (right-binding-power = 0)
+;;     Read `token'
+;;     expression = Result of the `nud' parse method for `token' (nud token)
+;;     while right-binding-power < left-binding-power(next token)
+;;         Read `token'
+;;         expression = Result of the `led' parse method for `token' (led expression token)
+;;     return expression
+;;
+;; For each token read, either the `nud' or `led' parse method is
+;; dispatched. Let's consider this in the context of the simple
+;; grammar from above.
+;;
+;; The nud for number just returns the number.
+;; The nud for the prefix '+' calls parse expression to get it's right expression.
+;; The nud for '(' calls parse expression and then expects the closer ')'.
+;; The led for postfix '++' simply applies its operation to the left expression.
+;; The led for infix '+' calls parse expression to get its right expression.
+;;
+
+
+(require 'math-parse-util)
 (require 'math-token)
-(require 'math-util)
 
 (defconst math-cur-tok nil
   "The current parser token.")
-
-(defconst math-prefix-left-bp-table (make-hash-table :test 'equal)
-  "Maps a token identifier to the identifier's prefix left binding power.")
-
-(defconst math-prefix-fn-table (make-hash-table :test 'equal)
-  "Maps a token identifier to the identifier's prefix parse function.")
-
-(defconst math-infix-left-bp-table (make-hash-table :test 'equal)
-  "Maps a token identifier to the identifier's infix left binding power.")
-
-(defconst math-infix-fn-table (make-hash-table :test 'equal)
-  "Maps a token identifier to the identifier's infix parse function.")
-
-(defun math-put-table (key value table)
-  (if (gethash key table)
-      (error "Identifier %s already has an entry in table %s" key table)
-    (puthash key value table)))
-
-(defun math-get-table (key table)      
-  (gethash key table))
-
-;; Prefix parse methods.
-;;
-;; A symbol's prefix parse method is invoked if it is the first token
-;; read by parse-expression. The method is passed the current token
-;; and returns an expression.
-
-;; Parse `operator expression' --> (operator expression)
-;; token: operator
-(defun math-parse-prefix (token)
-  `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
-
-;; Parse `literal' --> value
-;; token: literal
-(defun math-parse-prefix-literal (token)
-  (math-token-src token))
-
-;; Parse `(expr1)' --> expr1
-;; token: `('
-(defun math-parse-prefix-paren-group (token)
-  (let ((expression (math-parse-expression 0)))
-    (math-parser-expect-closer ")")
-    expression))
-
-;; Infix parse methods.
-;;
-;; A symbol's infix parse methhod is invoked if it is the nth token
-;; read by parse-expression where n is even. The method is passed the
-;; currently built up left-expression and the current token and
-;; returns an expression.
-;;
-
-;; Parse `expr1 operator expr2' --> (operator expr1 expr2)
-;; token: operator (left associative)
-(defun math-parse-infix-left (left-expression token)
-  `(,(math-token-id token)
-    ,left-expression
-    ,(math-parse-expression (math-token-infix-left-bp token))))
-
-;; Parse `expr1 operator expr2' --> (operator expr1 expr2)
-;; token: operator (right associative)
-(defun math-parse-infix-right (left-expression token)
-  `(,(math-token-id token)
-    ,left-expression
-    ,(math-parse-expression (- (math-token-infix-left-bp token) 1))))
-
-;; Parse `name[expr1,expr2,...]' --> (name expr1 expr2 ...).
-;; left-expression: name
-;; token: `['
-(defun math-parse-infix-sequence (left-expression token)
-  (let ((sequence `(,left-expression)))
-    (while (not (equal (math-parser-peek-infix-id) "]"))
-      (let ((expression (math-parse-expression 0)))
-	(math-append-to-list sequence expression))
-      (if (equal (math-parser-peek-infix-id) ",")
-	  (math-parser-expect-separator ",")))
-    (math-parser-expect-closer "]")
-    sequence))
-
-;; Parse `expr1 operator expr2 ...' --> (operator expr1 expr2 ...)
-;; token: operator
-;;
-;; This is used to parse flat operators, i.e. operators that a
-;; variable number of expressions.
-(defun math-parse-infix-non (left-expression token)
-  "Parse a non-associative infix operator into `(operator (sub-expr) (sub-expr) ...)'."
-  (let ((right-expression (math-parse-expression (math-token-infix-left-bp token))))
-    (let ((expressions `(,left-expression ,right-expression)))
-      (while (equal (math-parser-peek-infix-id) (math-token-id token))
-	(math-parser-advance-token)
-	(math-append-to-list expressions (math-parse-expression (math-token-infix-left-bp token))))
-      (cons (math-token-id token) expressions))))
-
-;; Methods for registering identifiers in the parser tables.
-;;
-(defun math-register-symbol (identifier)
-  (math-put-table identifier 0 math-prefix-left-bp-table)
-  (math-put-table identifier 0 math-infix-left-bp-table))
-
-(defun math-register-symbol-prefix (identifier bp fn)
-  (math-put-table identifier bp math-prefix-left-bp-table)
-  (math-put-table identifier fn math-prefix-fn-table))
-
-(defun math-register-symbol-infix (identifier bp fn)
-  (math-put-table identifier bp math-infix-left-bp-table)
-  (math-put-table identifier fn math-infix-fn-table))
-
-(defun math-register-literal (identifier &optional prefix)
-  "Add the given literal identifier to the parser tables."
-  (math-put-table identifier (or prefix 'math-parse-prefix-literal) math-prefix-fn-table)
-  (math-put-table identifier 0 math-prefix-left-bp-table))
-
-(defun math-register-prefix (identifier left-bp &optional prefix)
-  "Add the given prefix identifier to the parser tables."
-  (math-put-table identifier (or prefix 'math-parse-prefix) math-prefix-fn-table)
-  (math-put-table identifier left-bp math-prefix-left-bp-table))
-
-(defun math-register-infix-non (identifier left-bp &optional infix)
-  "Add the given infix identifier to the parser tables."
-  (math-put-table identifier (or infix 'math-parse-infix-non) math-infix-fn-table)
-  (math-put-table identifier left-bp math-infix-left-bp-table))
-
-(defun math-register-infix-left (identifier left-bp &optional infix)
-  "Add the given infix identifier to the parser tables."
-  (math-put-table identifier (or infix 'math-parse-infix-left) math-infix-fn-table)
-  (math-put-table identifier left-bp math-infix-left-bp-table))
-
-(defun math-register-infix-right (identifier left-bp &optional infix)
-  "Add the given infix identifier to the parser tables."
-  (math-put-table identifier (or infix 'math-parse-infix-right) math-infix-fn-table)
-  (math-put-table identifier left-bp math-infix-left-bp-table))
 
 ;; The core parsing methods.
 ;;	
@@ -142,20 +92,20 @@
   "Get the next token and set its properties based on the parser tables."
   (let* ((token (math-token-make-instance (math-next-token)))
 	 (identifier (math-token-id token)))
-    (math-token-set-prefix-left-bp token (math-get-table identifier math-prefix-left-bp-table))
-    (math-token-set-prefix-fn token (math-get-table identifier math-prefix-fn-table))
-    (math-token-set-infix-left-bp token (math-get-table identifier math-infix-left-bp-table))
-    (math-token-set-infix-fn token (math-get-table identifier math-infix-fn-table))
+    (math-token-set-nud-left-bp token (math-get-table identifier math-nud-left-bp-table))
+    (math-token-set-nud-fn token (math-get-table identifier math-nud-fn-table))
+    (math-token-set-led-left-bp token (math-get-table identifier math-led-left-bp-table))
+    (math-token-set-led-fn token (math-get-table identifier math-led-fn-table))
     (setq math-cur-tok token)))
 
-(defun math-parser-peek-infix-left-bp ()
+(defun math-parser-peek-led-left-bp ()
   "The left binding power of the next token to be read."
   (let* ((pair (math-peek-token))
 	 (id (math-token-id (math-token-make-instance pair)))
-	 (bp (math-get-table id math-infix-left-bp-table)))
+	 (bp (math-get-table id math-led-left-bp-table)))
     (if bp bp (error "error: Unknown operator %s." id)))) 
 
-(defun math-parser-peek-infix-id ()
+(defun math-parser-peek-led-id ()
   "The id of next token to be read."
   (let ((pair (math-peek-token)))
     (math-token-id (math-token-make-instance pair))))
@@ -175,27 +125,27 @@
   ;; Get the first token of the expression.
   (math-parser-advance-token)
 
-  ;; Get the prefix function for parsing the current token.
-  (let ((prefix (math-token-prefix-fn math-cur-tok)))
-    (unless prefix 
-      (error "No prefix function for token %s" math-cur-tok))
+  ;; Get the nud function for parsing the current token.
+  (let ((nud (math-token-nud-fn math-cur-tok)))
+    (unless nud 
+      (error "No nud function for token %s" math-cur-tok))
 
-    ;; Apply the prefix function to get the parsed left sub-expression.
-    (let ((subexpr (funcall prefix math-cur-tok)))
+    ;; Apply the nud function to get the parsed left sub-expression.
+    (let ((subexpr (funcall nud math-cur-tok)))
 
       ;; As long as the next token's binding power is higher than the
-      ;; current right-bp, keep processing infix expressions.
-      (while (< right-bp (math-parser-peek-infix-left-bp))
+      ;; current right-bp, keep processing led expressions.
+      (while (< right-bp (math-parser-peek-led-left-bp))
 
 	  ;; Get the next token.
 	  (math-parser-advance-token)
 
-	  ;; Gett the infix function for parsing the current token.
-	  (let ((infix (math-token-infix-fn math-cur-tok)))
-	    (unless infix
-	      (error "No infix function for token %s" math-cur-tok))
+	  ;; Gett the led function for parsing the current token.
+	  (let ((led (math-token-led-fn math-cur-tok)))
+	    (unless led
+	      (error "No led function for token %s" math-cur-tok))
 	    
-	    (setq subexpr (funcall infix subexpr math-cur-tok))))
+	    (setq subexpr (funcall led subexpr math-cur-tok))))
       subexpr)))
 	    
 
@@ -204,9 +154,8 @@
     (goto-char (point-min))
     (math-parse-expression 0)))
 
-;; Separators and Terminators
+;; Operator Definitions.
 ;;
-(math-register-symbol math-token-eof)
 
 ;; Literals
 ;;
@@ -217,42 +166,43 @@
 
 ;; name[expr1,expr2,...]
 ;;
-(math-register-symbol-infix "[" 745 'math-parse-infix-sequence)
+(math-register-symbol-led "[" 745 'math-parse-led-sequence)
 
 ;; Unary mathematical operators
 ;;
-(math-register-prefix "+" 490)
-(math-register-prefix "-" 490)
+(math-register-nud "+" 490)
+(math-register-nud "-" 490)
 
 ;; Binary mathematical operators
 ;;
-(math-register-infix-non "+" 330)
-(math-register-infix-non "-" 330)
-(math-register-infix-left "*" 410)
-(math-register-infix-left "/" 480)
-(math-register-infix-right "^" 590)
+(math-register-led-flat "+" 330)
+(math-register-led-flat "-" 330)
+(math-register-led-left "*" 410)
+(math-register-led-left "/" 480)
+(math-register-led-right "^" 590)
 
 ;; Grouping operator.
 ;;
-(math-register-symbol-prefix "(" 100 'math-parse-open-paren)
+(math-register-symbol-nud "(" 100 'math-parse-open-paren)
 
 ;; expr>>filename      --> Put[expr,"filename"]
 ;; expr>>>filename     --> PutAppend[expr,"filename"]
-(math-register-infix-left ">>" 30)
-(math-register-infix-left ">>>" 30)
+(math-register-led-left ">>" 30)
+(math-register-led-left ">>>" 30)
 
 ;; expr1;expr2;expr3   --> CompoundExpression[expr1,expr2,expr3]
 ;; expr1;expr2;        --> CompoundExpression[expr1,expr2,Null]
 ;;
 ;; TODO - add lookahead in tokenizer for ws to eol so that the eos
 ;; parser can check for the second version and add the Null marker.
-(math-register-infix-non ";" 20)
+(math-register-led-flat ";" 20)
 
 ;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
-(math-register-infix-right "\\`" 10)
+(math-register-led-right "\\`" 10)
 
 ;; Separators and Closers need to be registered, but do not have any
 ;; associated precedence or parsing funtions.
+(math-register-symbol math-token-eof)
 (math-register-symbol ",")
 (math-register-symbol "]")
 (math-register-symbol ")")
