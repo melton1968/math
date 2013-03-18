@@ -20,7 +20,7 @@
 ;;
 (defun math-token-prefix-left-bp (token)
   "The prefix left binding power for token."
-  (aref token math-token-left-bp-index))
+  (aref token math-token-prefix-left-bp-index))
 
 (defun math-token-prefix-fn (token)
   "The prefix parsing function for token."

@@ -30,11 +30,10 @@
 (defun math-parse-prefix-literal (token)
   "Parse a literal token into `(token-type value)'"
   (math-token-src token))
-;;`(,(math-token-id token) ,(math-token-src token)))
 
-(defun math-parse-prefix (left-expression token)
+(defun math-parse-prefix (token)
   "Parse a left associaive infix operator into `(operator expr)'"
-  `(,(math-token-id token) ,left-expression))
+  `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
 
 (defun math-parse-infix-left (left-expression token)
   "Parse a left associaive infix operator into `(operator (sub-expr) (sub-expr))'"
@@ -48,17 +47,29 @@
     ,left-expression
     ,(math-parse-expression (- (math-token-infix-left-bp token) 1))))
 
+(defun math-parse-open-paren (left-expression token)
+  (let (subexpr (math-parse-expression 0))
+    (math-token-advance ")")
+    `(,subexpr)))
+
 ;; Methods for registering identifiers in the parser tables.
 ;;
+(defun math-register-symbol (identifier)
+  (math-put-table identifier 0 math-prefix-left-bp-table)
+  (math-put-table identifier 0 math-infix-left-bp-table))
+
+(defun math-register-symbol-prefix (identifier bp fn)
+  (math-put-table identifier bp math-prefix-left-bp-table)
+  (math-put-table identifier fn math-prefix-fn-table))
+
+(defun math-register-symbol-infix (identifier bp fn)
+  (math-put-table identifier bp math-infix-left-bp-table)
+  (math-put-table identifier fn math-infix-fn-table))
+
 (defun math-register-literal (identifier &optional prefix)
   "Add the given literal identifier to the parser tables."
   (math-put-table identifier (or prefix 'math-parse-prefix-literal) math-prefix-fn-table)
   (math-put-table identifier 0 math-prefix-left-bp-table))
-
-(defun math-register-terminator (identifier)
-  "Add the given literal identifier to the parser tables."
-  (math-put-table identifier 0 math-prefix-left-bp-table)
-  (math-put-table identifier 0 math-infix-left-bp-table))
 
 (defun math-register-prefix (identifier left-bp &optional prefix)
   "Add the given prefix identifier to the parser tables."
@@ -129,18 +140,20 @@
 (math-register-literal math-token-number)
 (math-register-literal math-token-string)
 
-(math-register-terminator math-token-eof)
+(math-register-symbol math-token-eof)
 
 ;;(math-parser-name math-token-name)
 
-;;(math-parser-prefix "+")
-;;(math-parser-prefix "-")
+(math-register-prefix "+" 70)
+(math-register-prefix "-" 70)
 
 (math-register-infix-left "+" 20)
 (math-register-infix-left "-" 20)
 (math-register-infix-left "*" 30)
 (math-register-infix-left "/" 30)
 (math-register-infix-right "^" 40)
+
+(math-register-symbol-prefix "(" 100 (lambda (left-expression token) (math-parse-expression 0)))
 
 (defun math-parse-buffer-command ()
   (interactive)
