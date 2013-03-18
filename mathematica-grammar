@@ -1,0 +1,44 @@
+;; Mathematica grammar from mathics
+;;
+;; expr ::= expr expr
+;; expr ::= ( expr )
+;; expr ::= expr /: expr = expr
+;; expr ::= expr /: expr := expr
+;; expr ::= expr /: expr =.
+;; expr ::= expr ;
+;; expr ::= expr args
+;; expr ::= expr position
+;; span_start ::= expr
+;; span_stop ::= expr
+;; span_stop ::= 
+;; span_step ::= expr
+;; span_step ::= 
+;; expr ::= span_start ;; span_stop ;; span_step
+;; expr ::= span_start ;; span_stop
+;; args ::= [ sequence ]
+;; expr ::= { sequence }
+;; position ::= [[ sequence ]]
+;; rest_left ::= 
+;; rest_left ::= expr
+;; rest_left ::= expr binary_op
+;; rest_right ::=
+;; rest_right ::= expr
+;; rest_right ::= args rest_right
+;; rest_right ::= positon rest_right
+;; rest_right ::= rest_right binary_op expr
+;; sequence ::=
+;; sequence ::= sequence , expr
+;; sequence ::= expr
+;; sequence ::= ,
+;; sequence ::= sequence ,
+;; expr ::= symbol
+;; expr ::= int
+;; expr ::= float
+;; expr ::= blanks
+;; expr ::= blankdefault
+;; expr ::= slot
+;; expr ::= slotseq
+;; expr ::= out
+;; expr ::= string
+;; u'binary_op ::= %s\n' % operator
+
