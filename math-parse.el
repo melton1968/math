@@ -28,12 +28,27 @@
 ;; Parse methods for literal, infix-left, prefix.
 ;;
 (defun math-parse-prefix-literal (token)
-  "Parse a literal token into `(token-type value)'"
+  "Parse a literal token into `value'."
   (math-token-src token))
 
 (defun math-parse-prefix (token)
-  "Parse a left associaive infix operator into `(operator expr)'"
+  "Parse a prefix operator into `(operator expression)'"
   `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
+
+(defun math-parse-open-paren (token)
+  "Parse an open paren into `(expression)'."
+  (let ((subexpr (math-parse-expression 0)))
+    (math-parser-expect-closer ")")
+    subexpr))
+
+(defun math-parse-infix-non (left-expression token)
+  "Parse a non-associative infix operator into `(operator (sub-expr) (sub-expr) ...)'."
+  (let ((right-expression (math-parse-expression (math-token-infix-left-bp token))))
+    (let ((expressions `(,left-expression ,right-expression)))
+      (while (equal (math-parser-peek-infix-id) (math-token-id token))
+	(math-parser-advance-token)
+	(math-append-to-list expressions (math-parse-expression (math-token-infix-left-bp token))))
+      (cons (math-token-id token) expressions))))
 
 (defun math-parse-infix-left (left-expression token)
   "Parse a left associaive infix operator into `(operator (sub-expr) (sub-expr))'"
@@ -42,15 +57,11 @@
     ,(math-parse-expression (math-token-infix-left-bp token))))
 
 (defun math-parse-infix-right (left-expression token)
-  "Parse a left associaive infix operator into `(operator (sub-expr) (sub-expr))'"
+  "Parse a right associaive infix operator into `(operator (sub-expr) (sub-expr))'"
   `(,(math-token-id token)
     ,left-expression
     ,(math-parse-expression (- (math-token-infix-left-bp token) 1))))
 
-(defun math-parse-open-paren (left-expression token)
-  (let (subexpr (math-parse-expression 0))
-    (math-token-advance ")")
-    `(,subexpr)))
 
 ;; Methods for registering identifiers in the parser tables.
 ;;
@@ -76,6 +87,11 @@
   (math-put-table identifier (or prefix 'math-parse-prefix) math-prefix-fn-table)
   (math-put-table identifier left-bp math-prefix-left-bp-table))
 
+(defun math-register-infix-non (identifier left-bp &optional infix)
+  "Add the given infix identifier to the parser tables."
+  (math-put-table identifier (or infix 'math-parse-infix-non) math-infix-fn-table)
+  (math-put-table identifier left-bp math-infix-left-bp-table))
+
 (defun math-register-infix-left (identifier left-bp &optional infix)
   "Add the given infix identifier to the parser tables."
   (math-put-table identifier (or infix 'math-parse-infix-left) math-infix-fn-table)
@@ -100,8 +116,20 @@
 
 (defun math-parser-peek-infix-left-bp ()
   "The left binding power of the next token to be read."
+  (let* ((pair (math-peek-token))
+	 (id (math-token-id (math-token-make-instance pair)))
+	 (bp (math-get-table id math-infix-left-bp-table)))
+    (if bp bp (error "error: Unknown operator %s." id)))) 
+
+(defun math-parser-peek-infix-id ()
+  "The id of next token to be read."
   (let ((pair (math-peek-token)))
-    (math-get-table (math-token-id (math-token-make-instance pair)) math-infix-left-bp-table)))
+    (math-token-id (math-token-make-instance pair))))
+
+(defun math-parser-expect-closer (closer)
+  (let ((token (math-next-token)))
+    (unless (and (equal (car token) :operator) (equal (cdr token) closer))
+      (error "Exepcted %s but read %s instead" closer (cdr token)))))
   
 (defun math-parse-expression (right-bp)
   "Parse an expression."
@@ -137,23 +165,51 @@
     (goto-char (point-min))
     (math-parse-expression 0)))
 
+;; Separators and Terminators
+;;
+(math-register-symbol math-token-eof)
+
+;; Literals
+;;
 (math-register-literal math-token-number)
 (math-register-literal math-token-string)
 
-(math-register-symbol math-token-eof)
 
 ;;(math-parser-name math-token-name)
 
-(math-register-prefix "+" 70)
-(math-register-prefix "-" 70)
+;; Unary mathematical operators
+;;
+(math-register-prefix "+" 490)
+(math-register-prefix "-" 490)
 
-(math-register-infix-left "+" 20)
-(math-register-infix-left "-" 20)
-(math-register-infix-left "*" 30)
-(math-register-infix-left "/" 30)
-(math-register-infix-right "^" 40)
+;; Binary mathematical operators
+;;
+(math-register-infix-non "+" 330)
+(math-register-infix-non "-" 330)
+(math-register-infix-left "*" 410)
+(math-register-infix-left "/" 480)
+(math-register-infix-right "^" 590)
 
-(math-register-symbol-prefix "(" 100 (lambda (left-expression token) (math-parse-expression 0)))
+;; Openers and closers
+;;
+(math-register-symbol-prefix "(" 100 'math-parse-open-paren)
+(math-register-symbol-infix ")" 0 nil)
+
+;; expr>>filename      --> Put[expr,"filename"]
+;; expr>>>filename     --> PutAppend[expr,"filename"]
+(math-register-infix-left ">>" 30)
+(math-register-infix-left ">>>" 30)
+
+;; expr1;expr2;expr3   --> CompoundExpression[expr1,expr2,expr3]
+;; expr1;expr2;        --> CompoundExpression[expr1,expr2,Null]
+;;
+;; TODO - add lookahead in tokenizer for ws to eol so that the eos
+;; parser can check for the second version and add the Null marker.
+(math-register-infix-non ";" 20)
+
+;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
+(math-register-infix-right "\\`" 10)
+
 
 (defun math-parse-buffer-command ()
   (interactive)

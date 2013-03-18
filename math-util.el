@@ -1,4 +1,10 @@
 
+;; Append to list
+;;
+(defun math-append-to-list (list elem)
+  "Appends elem to the end of list."
+  (setcdr (last list) (cons elem nil)))
+
 ;; Creating and manipulating instances of the math-token class.
 ;;
 (defconst math-token-prefix-left-bp-index 0 "The slot for prefix-left-bp")

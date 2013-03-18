@@ -54,7 +54,7 @@
   "The regular expression for a Mathmatica number.")
 
 (defconst math-operator-re
-  (regexp-opt '("=" ":=" "," ";" ":" "::" "|" "-" "+" "*" "/" "^"))
+  (regexp-opt '("\\`" ";" ">>" ">>>" "=" ":=" "," ":" "::" "|" "-" "+" "*" "/" "^"))
   "The regular expression for a Mathmatica operator.")
 
 (defconst math-token-number ":number"
