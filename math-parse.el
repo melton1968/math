@@ -179,10 +179,10 @@
     (math-parser-advance-token))
 
   ;; Read expressions until we find an eol or eof terminated expression.
-  (let ((expressions nil))
+  (let ((expressions (list 'marker)))
     (while (and (not (equal (math-token-id (math-peek-token)) math-token-eol))
 		(not (equal (math-token-id (math-peek-token)) math-token-eof)))
-      (setq expressions (cons (math-parse-expression 0) expressions))
+      (math-append-to-list expressions (math-parse-expression 0))
       ;; The expression must be terminated by one of: `;' `eol' `eof'.
       (let* ((token (math-peek-token))
 	     (id (math-token-id token)))
@@ -201,7 +201,7 @@
 	  (math-parse-error 
 	   (format "Expected a `;' but read `%s' instead." id)
 	   token)))))
-    expressions))
+    (cdr expressions)))
 
 (defun math-parse-buffer ()
   (interactive)
