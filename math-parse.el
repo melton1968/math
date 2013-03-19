@@ -134,10 +134,15 @@
   ;; Get the first token of the expression.
   (math-parser-advance-token)
 
-  ;; Skip over eol tokens since we need to parse this sub-expression
-  ;; in order to finish parsing the expression.
+  ;; Incomplete Mathematica expressions can be continued on the next
+  ;; line. Since we are trying to parse an expression, skip over the
+  ;; eol markers.
   (while (equal (math-token-id math-cur-tok) math-token-eol)
     (math-parser-advance-token))
+
+  ;; If we see an eof marker here, then this expression is incomplete.
+  (if (equal (math-token-id math-cur-tok) math-token-eof)
+      (math-parse-error "Incomplete expression" token))
 
   ;; Get the nud function for parsing the current token.
   (let ((nud (math-token-nud-fn math-cur-tok)))
@@ -168,17 +173,42 @@
 
 (defun math-parse-statement ()
   "Parse a statement."
-  (math-parse-expression 0)
-  (math-parser-expect-closer ";")
-  )
-	    
+
+  ;; Discard blank lines.
+  (while (equal (math-token-id (math-peek-token)) math-token-eol)
+    (math-parser-advance-token))
+
+  ;; Read expressions until we find an eol or eof terminated expression.
+  (let ((expressions nil))
+    (while (and (not (equal (math-token-id (math-peek-token)) math-token-eol))
+		(not (equal (math-token-id (math-peek-token)) math-token-eof)))
+      (setq expressions (cons (math-parse-expression 0) expressions))
+      ;; The expression must be terminated by one of: `;' `eol' `eof'.
+      (let* ((token (math-peek-token))
+	     (id (math-token-id token)))
+	(cond
+	 ;; Consume the `;'
+	 ((equal id ";") 
+	  (math-parser-advance-token))
+	 ;; The eol marker will cause the while loop to terminate.
+	 ((equal id math-token-eol)
+	  t)
+	 ;; The eof marker will cause the while loop to terminate.
+	 ((equal id math-token-eof)
+	  t)
+	 ;; Otherwise, there is a syntax error.
+	 (t
+	  (math-parse-error 
+	   (format "Expected a `;' but read `%s' instead." id)
+	   token)))))
+    expressions))
 
 (defun math-parse-buffer ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-parse-output*"
-      (princ (math-parse-expression 0)))))
+      (princ (math-parse-statement 0)))))
 
 (defun math-parse-region (begin end)
   (interactive "r")
@@ -192,7 +222,7 @@
 	  (princ input)
 	  (princ "\n\n")
 	  (princ "Parse:\n\n")
-	  (princ (math-parse-expression 0)))))))
+	  (princ (math-parse-statement)))))))
 
 
 ;; Operator Definitions.
