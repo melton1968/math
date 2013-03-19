@@ -13,18 +13,18 @@
 ;; Parse `operator expression' --> (operator expression)
 ;; token: operator
 (defun math-parse-nud-prefix (token)
-  `(,(math-token-id token) ,(math-parse-expression (math-token-prefix-left-bp token))))
+  `(,(math-token-id token) ,(math-parse-expression (math-token-nud-left-bp token))))
 
 ;; Parse `literal' --> value
 ;; token: literal
 (defun math-parse-nud-literal (token)
-  (math-token-src token))
+  (math-token-source token))
 
 ;; Parse `(expression)' --> expression
 ;; token: `('
 (defun math-parse-nud-paren (token)
   (let ((expression (math-parse-expression 0)))
-    (math-parser-expect-closer ")")
+    (math-parse-expect-closer ")")
     expression))
 
 ;; Parse eof --> nil

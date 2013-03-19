@@ -7,8 +7,6 @@ ClearAll[mxAnd, mxOr, mxInterval, mxMakeInterval, mxIntervalPlot, mxIntervalSymb
 
 mxMakeInterval::badarg = "The expression `` is not a relational operator (Inequality|Less|LessEqual|GreaterEqual|Greater) nor a logical Or of relational operators.";
 
-x := "A string with an escaped \" character for testing";
-
 (*
   Less[x,a] and LessEqual[x,a]
   x <  a

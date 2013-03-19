@@ -59,7 +59,7 @@
 
 (defun math-token-file (token)
   "The source file from which token was derived."
-  (current-buffer-name))
+  (buffer-name))
 
 (defun math-token-line (token)
   "The source file line number from which token was derived."
