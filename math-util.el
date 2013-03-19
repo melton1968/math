@@ -17,7 +17,8 @@
 (defconst math-token-line-index 7 "The source code line number.")
 (defconst math-token-begin-index 8 "The start column of the token in the source code.")
 (defconst math-token-end-index 9 "The end column of the token in the source code.")
-(defconst math-token-last-index 10 "The number of slots")
+(defconst math-token-level-index 10 "The matchfix depth immediately following token.")
+(defconst math-token-last-index 11 "The number of slots")
 
 (defun math-token-make-instance (type src)
   "Create a token instance."
@@ -28,6 +29,7 @@
     (aset new-obj math-token-line-index (line-number-at-pos (point)))
     (aset new-obj math-token-begin-index nil)
     (aset new-obj math-token-end-index nil)
+    (aset new-obj math-token-level-index (nth 0 (syntax-ppss)))
     new-obj))
 
 ;; Getting the left-bp, right-bp, nud-parse, led-parse, id and src attributes for a token.
@@ -71,6 +73,10 @@
 (defun math-token-end (token)
   "The source file column number of the end of the token."
   (aref token math-token-end-index))
+
+(defun math-token-level (token)
+  "The matchfix depth level for the point just after this token."
+  (aref token math-token-level-index))
 
 ;; Setting the left-bp, right-bp, nud-parse, led-parse attributes for a token.
 ;;

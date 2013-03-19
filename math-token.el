@@ -62,14 +62,25 @@ token."
 				  (car pair) 
 				  (match-string-no-properties 0)))))))
 
-      ;; If we are at the end of the buffer, return the end token.
-      (if (= (point) (point-max))
-	  (math-token-make-instance math-token-eof math-token-eof)
+      (cond 
+       ;; If we are at the end of the buffer, return the end token.
+       ((= (point) (point-max)) (math-token-make-instance math-token-eof math-token-eof))
+       
+       ;; If we are looking at a newline
+       ((= (char-after (point)) ?\n)
+	(forward-char 1)
+	;; If we are at top-level, then return the eol token.
+	;; Otherwise, skip the eol and return the next token.
+	(if (= (nth 0 (syntax-ppss)) 0) 
+	    (math-token-make-instance math-token-eol math-token-eol)
+	  (math-next-token)))
+	
 	;; Otherwise, we did not recognize the token. Move forward one
 	;; character so we do not get stuck and then return the
 	;; unrecognized token.
+       (t 
 	(forward-char 1)
-	(math-token-make-instance math-token-unknown (string (char-before (point))))))))
+	(math-token-make-instance math-token-unknown (string (char-before (point)))))))))
 
 (defun math-peek-token (&optional backward)
   "Same as math-next-token except the token is not consumed."

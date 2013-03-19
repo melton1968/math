@@ -134,6 +134,11 @@
   ;; Get the first token of the expression.
   (math-parser-advance-token)
 
+  ;; Skip over eol tokens since we need to parse this sub-expression
+  ;; in order to finish parsing the expression.
+  (while (equal (math-token-id math-cur-tok) math-token-eol)
+    (math-parser-advance-token))
+
   ;; Get the nud function for parsing the current token.
   (let ((nud (math-token-nud-fn math-cur-tok)))
     (unless nud 
@@ -160,6 +165,12 @@
 	    
 	    (setq subexpr (funcall led subexpr math-cur-tok))))
       subexpr)))
+
+(defun math-parse-statement ()
+  "Parse a statement."
+  (math-parse-expression 0)
+  (math-parser-expect-closer ";")
+  )
 	    
 
 (defun math-parse-buffer ()
@@ -195,8 +206,7 @@
 ;;
 (math-register-nud math-token-number 0 'math-parse-nud-literal)
 (math-register-nud math-token-string 0 'math-parse-nud-literal)
-
-;;(math-parser-name math-token-name)
+(math-register-nud math-token-name   0 'math-parse-nud-literal)
 
 ;; name[expr1,expr2,...]
 ;;
@@ -234,13 +244,18 @@
 ;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
 (math-register-led-right "\\`" 10)
 
-;; Separators and Closers need to be registered, but do not have any
-;; associated precedence or parsing funtions.
-(math-register-symbol ";")
+;; Separators need to be registered.
 (math-register-symbol ",")
+
+;; Closers need to be registered.
+(math-register-symbol ";")
 (math-register-symbol "]")
 (math-register-symbol ")")
+(math-register-symbol "}")
 (math-register-symbol math-token-eof)
+(math-register-symbol math-token-eol)
 
+;; Symbols that terminate an expression when they appear at top level before a newline.
+(defconst top-level-enders-re '(";" "]" ")" "}" :number :string :name))
 
 (provide 'math-parse)

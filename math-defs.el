@@ -69,6 +69,9 @@
 (defconst math-token-eof ":eof"
   "The token identifier representing the end of the input.")
 
+(defconst math-token-eol ":eol"
+  "The token identifier representing the end of line.")
+
 (defconst math-token-unknown ":unknown"
   "The token identifier representing an unknown token.")
 

@@ -47,6 +47,10 @@
     (modify-syntax-entry ?&  "." table)
     (modify-syntax-entry ?|  "." table)
     (modify-syntax-entry ?\' "\"" table)
+
+    ;; Make newline a punctuation character so we can return it as a
+    ;; token.
+    (modify-syntax-entry ?\n "." table)
     
     ;; '$' -> symbol since $ is allowed in identifier names.
     (modify-syntax-entry ?\$ "w" table)

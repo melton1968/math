@@ -32,4 +32,11 @@
 (defun math-parse-nud-eof (token)
   nil)
 
+;; Parse eol --> skip the eol token and try to parse an expression
+;; again.
+;; token: eol
+;;;;;;;;;;;;;;; TODO: is a binding power of 0 correct here?
+(defun math-parse-nud-eol (token)
+  (math-parse-expression 0))
+
 (provide 'math-nud)
