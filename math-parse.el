@@ -118,7 +118,9 @@
   "The left binding power of the next token."
   (let* ((id (math-token-id math--next-tok))
 	 (bp (math-get-table id math-led-left-bp-table)))
-    (if bp bp (math-parse-error (format "No left binding power for operator `%s'." id) token))))
+    (if bp bp (math-parse-error 
+	       (format "No left binding power for operator `%s'." id) 
+	       math--next-tok))))
 
 (defun math-parse-peek-led-id ()
   "The id of next token to be read."
@@ -260,6 +262,7 @@
 (math-register-nud :identifier 0 'math-parse-nud-literal)
 (math-register-nud :string 0 'math-parse-nud-literal)
 (math-register-nud :number 0 'math-parse-nud-literal)
+(math-register-nud "\\[Infinity]"' 0 'math-parse-nud-literal)
 
 ;; expr::string          --> MessageName[expr,"string"]
 ;; expr::string::string  --> MessageName[expr,"string"]
@@ -268,6 +271,20 @@
 ;; name[expr1,expr2,...]
 ;;
 (math-register-led "[" 745 'math-parse-led-sequence)
+
+;; ?? Grouping operators ?? I do not know where these should go.
+(math-register-nud "(" 745 'math-parse-nud-paren)
+(math-register-nud "{" 745 'math-parse-nud-curly)
+
+
+;; expr1 /@  expr2  -->  Map[expr1,expr2]
+;; expr1 //@ expr2  -->  MapAll[expr1,expr2]
+;; expr1 @@  expr2  -->  Apply[expr1,expr2]
+;; expr1 @@@ expr2  -->  Apply[expr1,expr2,{1}]
+(math-register-led-right "/@" 640)
+(math-register-led-right "//@" 640)
+(math-register-led-right "@@" 640)
+(math-register-led-right "@@@" 640)
 
 ;; Unary mathematical operators
 ;;
@@ -282,6 +299,11 @@
 (math-register-led-left "/" 480)
 (math-register-led-right "^" 590)
 
+;; expr..                   --> Repeated[expr]
+;; expr...                  --> RepeatedNull[expr]
+(math-register-led-postfix ".." 170)
+(math-register-led-postfix "..." 170)
+
 ;; expr1|expr2              --> Alternatives[expr1,expr2] 
 (math-register-led-flat "|" 160)
 
@@ -289,9 +311,10 @@
 ;; patt:expr                --> Optional[patt,expr]
 (math-register-led-left ":" 150)
 
-;; Grouping operator.
-;;
-(math-register-nud "(" 100 'math-parse-nud-paren)
+;; expr1 -> expr2    --> Rule[expr1,expr2]
+;; expr1 :> expr2    --> RuleDelayed[expr1,expr2]
+(math-register-led-right "->" 120)
+(math-register-led-right ":>" 120)
 
 ;; expr1   = expr2          --> Set[expr1,expr2]
 ;; expr1  := expr2          --> SetDelayed[expr1,expr2]
@@ -333,5 +356,6 @@
 (math-register-symbol "}")
 (math-register-symbol :eof)
 (math-register-symbol :eol)
+
 
 (provide 'math-parse)

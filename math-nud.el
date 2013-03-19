@@ -27,6 +27,13 @@
     (math-parse-expect-closer ")")
     expression))
 
+;; Parse `{ ???? }' --> expression
+;; token: `{'
+(defun math-parse-nud-curly (token)
+  (let ((expression (math-parse-expression 0)))
+    (math-parse-expect-closer "}")
+    `(list ,expression)))
+
 ;; Parse eof --> nil
 ;; token: eof
 (defun math-parse-nud-eof (token)

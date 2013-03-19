@@ -52,5 +52,9 @@
   (math-put-table identifier 'math-parse-led-right math-led-fn-table)
   (math-put-table identifier left-bp math-led-left-bp-table))
 
+(defun math-register-led-postfix (identifier left-bp)
+  (math-put-table identifier 'math-parse-led-postfix math-led-fn-table)
+  (math-put-table identifier left-bp math-led-left-bp-table))
+
 
 (provide 'math-parse-util)

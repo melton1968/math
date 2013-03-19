@@ -51,4 +51,11 @@
 	(math-append-to-list expressions (math-parse-expression (math-token-led-left-bp token))))
       (cons (math-token-id token) expressions))))
 
+;; Parse `expr1 operator' --> (operator expr1)
+;; token: operator
+;;
+;; This is used to parse a postfix operator.
+(defun math-parse-led-postfix (left-expression token)
+  `(,(math-token-id token) ,left-expression))
+
 (provide 'math-led)
