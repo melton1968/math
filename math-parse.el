@@ -247,6 +247,10 @@
 (math-register-nud math-token-string 0 'math-parse-nud-literal)
 (math-register-nud math-token-name   0 'math-parse-nud-literal)
 
+;; expr::string          --> MessageName[expr,"string"]
+;; expr::string::string  --> MessageName[expr,"string"]
+(math-register-led-left "::" 780)
+
 ;; name[expr1,expr2,...]
 ;;
 (math-register-led "[" 745 'math-parse-led-sequence)
@@ -267,6 +271,21 @@
 ;; Grouping operator.
 ;;
 (math-register-nud "(" 100 'math-parse-nud-paren)
+
+;; expr1   = expr2          --> Set[expr1,expr2]
+;; expr1  := expr2          --> SetDelayed[expr1,expr2]
+;; expr1  ^= expr2          --> Upset[expr1,expr2]
+;; expr1 ^:= expr2          --> UpsetDelayed[expr1,expr2]
+;; expr =.                  --> Uset[expr]
+;; expr1 |-> expr2          --> Function[{expr1},expr2]
+;; symb /: expr1  = expr2   --> TagSet[symb,expr1,expr2]
+;; symb /: expr1 := expr2   --> TagSetDelayed[symb,expr1,expr2]
+;; symb /: expr1 =.         --> TagUnset[expr]
+(math-register-led-right "=" 40)
+(math-register-led-right ":=" 40)
+(math-register-led-right "^=" 40)
+(math-register-led-right "=." 40)
+(math-register-led-right "|->" 40)
 
 ;; expr>>filename      --> Put[expr,"filename"]
 ;; expr>>>filename     --> PutAppend[expr,"filename"]
