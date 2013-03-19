@@ -172,14 +172,14 @@
       subexpr)))
 
 (defun math-parse-statement ()
-  "Parse a statement."
+  "Parse a Mathematica statement."
 
   ;; Discard blank lines.
   (while (equal (math-token-id (math-peek-token)) math-token-eol)
     (math-parser-advance-token))
 
   ;; Read expressions until we find an eol or eof terminated expression.
-  (let ((expressions (list 'marker)))
+  (let ((expressions (list 'expressions)))
     (while (and (not (equal (math-token-id (math-peek-token)) math-token-eol))
 		(not (equal (math-token-id (math-peek-token)) math-token-eof)))
       (math-append-to-list expressions (math-parse-expression 0))
@@ -201,14 +201,23 @@
 	  (math-parse-error 
 	   (format "Expected a `;' but read `%s' instead." id)
 	   token)))))
-    (cdr expressions)))
+    expressions))
+
+(defun math-parse-program ()
+  "Parse a Mathematica program."
+
+  ;; Read statements until we see the `eof' token.
+  (let ((statements (list 'statements)))
+    (while (not (equal (math-token-id (math-peek-token)) math-token-eof))
+      (math-append-to-list statements (math-parse-statement)))
+    statements))
 
 (defun math-parse-buffer ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-parse-output*"
-      (princ (math-parse-statement 0)))))
+      (princ (math-parse-program)))))
 
 (defun math-parse-region (begin end)
   (interactive "r")
@@ -222,7 +231,7 @@
 	  (princ input)
 	  (princ "\n\n")
 	  (princ "Parse:\n\n")
-	  (princ (math-parse-statement)))))))
+	  (pp (math-parse-program)))))))
 
 
 ;; Operator Definitions.
