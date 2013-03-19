@@ -86,11 +86,18 @@
 (defconst math-cur-tok nil
   "The current parser token.")
 
+(defun math-parse-error (msg token)
+  "Dispatch an error for token with the given message."
+  (error "%s:%d: error: %s" 
+	 (math-token-file token)
+	 (math-token-line token)
+	 msg))
+
 ;; The core parsing methods.
 ;;	
 (defun math-parser-advance-token ()
   "Get the next token and set its properties based on the parser tables."
-  (let* ((token (math-token-make-instance (math-next-token)))
+  (let* ((token (math-next-token))
 	 (identifier (math-token-id token)))
     (math-token-set-nud-left-bp token (math-get-table identifier math-nud-left-bp-table))
     (math-token-set-nud-fn token (math-get-table identifier math-nud-fn-table))
@@ -100,25 +107,27 @@
 
 (defun math-parser-peek-led-left-bp ()
   "The left binding power of the next token to be read."
-  (let* ((pair (math-peek-token))
-	 (id (math-token-id (math-token-make-instance pair)))
+  (let* ((token (math-peek-token))
+	 (id (math-token-id token))
 	 (bp (math-get-table id math-led-left-bp-table)))
-    (if bp bp (error "error: No left binding power for operator `%s'." id))))
+    (if bp bp (math-parse-error (format "No left binding power for operator `%s'." id) token))))
 
 (defun math-parser-peek-led-id ()
   "The id of next token to be read."
-  (let ((pair (math-peek-token)))
-    (math-token-id (math-token-make-instance pair))))
+  (let ((token (math-peek-token)))
+    (math-token-id token)))
 
 (defun math-parser-expect-closer (closer)
-  (let ((token (math-next-token)))
-    (unless (and (equal (car token) :operator) (equal (cdr token) closer))
-      (error "Exepcted matching %s but read %s instead" closer (cdr token)))))
+  (let* ((token (math-next-token))
+	 (id (math-token-id token)))
+    (unless (equal id closer)
+      (math-parse-error (format "Exepcted matching %s but read %s instead" closer id) token))))
 
 (defun math-parser-expect-separator (closer)
-  (let ((token (math-next-token)))
-    (unless (and (equal (car token) :operator) (equal (cdr token) closer))
-      (error "Exepcted %s but read %s instead" closer (cdr token)))))
+  (let* ((token (math-next-token))
+	 (id (math-token-id token)))
+    (unless (equal id closer)
+      (math-parse-error (format "Exepcted %s but read %s instead" closer id) token))))
   
 (defun math-parse-expression (right-bp)
   "Parse an expression."
@@ -128,7 +137,9 @@
   ;; Get the nud function for parsing the current token.
   (let ((nud (math-token-nud-fn math-cur-tok)))
     (unless nud 
-      (error "No nud function for token %s" math-cur-tok))
+      (math-parse-error 
+       (format "No nud function for `%s'" (math-token-src math-cur-tok)) 
+       math-cur-tok))
 
     ;; Apply the nud function to get the parsed left sub-expression.
     (let ((subexpr (funcall nud math-cur-tok)))
@@ -143,7 +154,9 @@
 	  ;; Gett the led function for parsing the current token.
 	  (let ((led (math-token-led-fn math-cur-tok)))
 	    (unless led
-	      (error "No led function for token %s" math-cur-tok))
+	      (math-parse-error
+	       (format "No led function for `%s'" (math-token-src math-cur-tok))
+	       math-cur-tok))
 	    
 	    (setq subexpr (funcall led subexpr math-cur-tok))))
       subexpr)))
@@ -173,6 +186,10 @@
 
 ;; Operator Definitions.
 ;;
+(setq math-nud-left-bp-table (make-hash-table :test 'equal))
+(setq math-nud-fn-table (make-hash-table :test 'equal))
+(setq math-led-left-bp-table (make-hash-table :test 'equal))
+(setq math-led-fn-table (make-hash-table :test 'equal))
 
 ;; Literals
 ;;
@@ -212,20 +229,18 @@
 ;;
 ;; TODO - add lookahead in tokenizer for ws to eol so that the eos
 ;; parser can check for the second version and add the Null marker.
-(math-register-led-flat ";" 20)
+;;(math-register-led-flat ";" 20)
 
 ;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
 (math-register-led-right "\\`" 10)
 
 ;; Separators and Closers need to be registered, but do not have any
 ;; associated precedence or parsing funtions.
+(math-register-symbol ";")
 (math-register-symbol ",")
 (math-register-symbol "]")
 (math-register-symbol ")")
-
-;; The eof marker is a special closer.
-(math-register-nud math-token-eof 0 'math-parse-nud-eof)
-(math-register-led math-token-eof 0 nil)
+(math-register-symbol math-token-eof)
 
 
 (provide 'math-parse)

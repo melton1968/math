@@ -33,22 +33,9 @@ If backward is not nil, move to the beginning of the comment."
       (forward-comment 1))))
 
 (defun math-next-token (&optional backward)
-  "The next lexical token in the buffer starting at `point'. If backward is not nil, 
-the previous lexical token.
-
-The returned token is of the form.
-
-`((:identifier . token-id) (:value token-value))' 
-
-where token-id is one of:
-
-`math-token-number'   - a literal number value.
-`math-token-string'   - a literal string value.
-`math-token-name'     - a program name (variable or function).
-operator-string       - a string representation of an operator.
-`math-token-unknown'  - an unknown token.
-
-and token-value is the verbatim text from which the token was derived."
+  "Consume and return the next lexical token in the buffer
+starting at `point'. If backward is not nil, the previous lexical
+token."
 
   ;; If case-fold search is true, then upper and lower cases are not
   ;; distinguishable in regular expressions. We set it to false
@@ -71,16 +58,18 @@ and token-value is the verbatim text from which the token was derived."
 	  (if (funcall looking (cdr pair))
 	      (progn
 		(goto-char (funcall match 0))
-		(throw 're-match `(,(car pair) . ,(match-string-no-properties 0)))))))
+		(throw 're-match (math-token-make-instance 
+				  (car pair) 
+				  (match-string-no-properties 0)))))))
 
       ;; If we are at the end of the buffer, return the end token.
       (if (= (point) (point-max))
-	  `(,math-token-eof . ,math-token-eof)
+	  (math-token-make-instance math-token-eof math-token-eof)
 	;; Otherwise, we did not recognize the token. Move forward one
 	;; character so we do not get stuck and then return the
 	;; unrecognized token.
 	(forward-char 1)
-	`(,math-token-unknown . ,(string (char-before (point))))))))
+	(math-token-make-instance math-token-unknown (string (char-before (point))))))))
 
 (defun math-peek-token (&optional backward)
   "Same as math-next-token except the token is not consumed."
@@ -89,23 +78,34 @@ and token-value is the verbatim text from which the token was derived."
 
 (defun math-next-token-command ()
   (interactive)
-  (let ((pair (math-next-token nil)))
-    (message "%s" pair)))
+  (let ((token (math-next-token nil)))
+    (message "%s" token)))
 
 (defun math-prev-token-command ()
   (interactive)
-  (let ((pair (math-next-token t)))
-    (message "%s" pair)))
+  (let ((token (math-next-token t)))
+    (message "%s" token)))
 
-(defun math-tokenize-buffer (buffer-name)
-  (interactive "BOutput buffer: ")
+(defun math-tokenize-region (begin end)
+  (interactive "r")
   (save-excursion
-    (let ((buffer (get-buffer-create buffer-name)))
-      (goto-char (point-min))
-      (while (< (point) (point-max))
-	(pp (math-next-token nil) buffer)
-	(terpri buffer))))
-  (switch-to-buffer buffer-name)
-  (goto-char (point-min)))
+    (save-restriction
+      (narrow-to-region begin end)
+      (math-tokenize-buffer))))
+
+(defun math-tokenize-buffer ()
+  (interactive)
+  (save-excursion
+    (goto-char (point-min))
+    (with-output-to-temp-buffer "*math-tokenize-output*"
+      (let ((last-line 0))
+	(while (< (point) (point-max))
+	  (let* ((token (math-next-token nil))
+		 (line (math-token-line token)))
+	    (if (> line last-line)
+		(terpri))
+	    (setq last-line line)
+	    (princ (math-token-src token))
+	    (princ " ")))))))
     
 (provide 'math-token)

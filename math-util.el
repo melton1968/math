@@ -7,19 +7,27 @@
 
 ;; Creating and manipulating instances of the math-token class.
 ;;
-(defconst math-token-nud-left-bp-index 0 "The slot for nud-left-bp")
-(defconst math-token-nud-fn-index 1 "The slot for nud-fn")
-(defconst math-token-led-left-bp-index 2 "The slot index for led-left-bp")
-(defconst math-token-led-fn-index 3 "The slot for led-fn")
-(defconst math-token-id-index 4 "The slot for id")
-(defconst math-token-src-index 5 "The slot for src")
-(defconst math-token-last-index 6 "The number of slots")
+(defconst math-token-nud-left-bp-index 0 "The nud-left-bp")
+(defconst math-token-nud-fn-index 1 "The nud-fn")
+(defconst math-token-led-left-bp-index 2 "The led-left-bp")
+(defconst math-token-led-fn-index 3 "The led-fn")
+(defconst math-token-id-index 4 "The token id")
+(defconst math-token-src-index 5 "The verbatim source code.")
+(defconst math-token-file-index 6 "The source code file name.")
+(defconst math-token-line-index 7 "The source code line number.")
+(defconst math-token-begin-index 8 "The start column of the token in the source code.")
+(defconst math-token-end-index 9 "The end column of the token in the source code.")
+(defconst math-token-last-index 10 "The number of slots")
 
-(defun math-token-make-instance (pair)
-  "Create a token instance from the pair (type . value)."
+(defun math-token-make-instance (type src)
+  "Create a token instance."
   (let ((new-obj (make-vector math-token-last-index nil)))
-    (aset new-obj math-token-id-index (if (equal (car pair) :operator) (cdr pair) (car pair)))
-    (aset new-obj math-token-src-index (cdr pair))
+    (aset new-obj math-token-id-index (if (equal type :operator) src type))
+    (aset new-obj math-token-src-index src)
+    (aset new-obj math-token-file-index (buffer-name))
+    (aset new-obj math-token-line-index (line-number-at-pos (point)))
+    (aset new-obj math-token-begin-index nil)
+    (aset new-obj math-token-end-index nil)
     new-obj))
 
 ;; Getting the left-bp, right-bp, nud-parse, led-parse, id and src attributes for a token.
@@ -47,6 +55,22 @@
 (defun math-token-src (token)
   "The verbatim source code from which token was derived."
   (aref token math-token-src-index))
+
+(defun math-token-file (token)
+  "The source file from which token was derived."
+  (aref token math-token-file-index))
+
+(defun math-token-line (token)
+  "The source file line number from which token was derived."
+  (aref token math-token-line-index))
+
+(defun math-token-begin (token)
+  "The source file column number of the start of the token."
+  (aref token math-token-begin-index))
+
+(defun math-token-end (token)
+  "The source file column number of the end of the token."
+  (aref token math-token-end-index))
 
 ;; Setting the left-bp, right-bp, nud-parse, led-parse attributes for a token.
 ;;
