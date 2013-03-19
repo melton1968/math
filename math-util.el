@@ -11,28 +11,22 @@
 (defconst math-token-nud-fn-index 1 "The nud-fn")
 (defconst math-token-led-left-bp-index 2 "The led-left-bp")
 (defconst math-token-led-fn-index 3 "The led-fn")
-(defconst math-token-id-index 4 "The token id")
-(defconst math-token-src-index 5 "The verbatim source code.")
-(defconst math-token-file-index 6 "The source code file name.")
-(defconst math-token-line-index 7 "The source code line number.")
-(defconst math-token-begin-index 8 "The start column of the token in the source code.")
-(defconst math-token-end-index 9 "The end column of the token in the source code.")
-(defconst math-token-level-index 10 "The matchfix depth immediately following token.")
-(defconst math-token-last-index 11 "The number of slots")
+(defconst math-token-class-index 4 "The token class.")
+(defconst math-token-source-index 5 "The verbatim source code.")
+(defconst math-token-begin-index 6 "The point just before token.")
+(defconst math-token-end-index 7 "The point just after token.")
+(defconst math-token-last-index 8 "The number of slots")
 
-(defun math-token-make-instance (type src)
+(defun math-token-make-instance (class source)
   "Create a token instance."
   (let ((new-obj (make-vector math-token-last-index nil)))
-    (aset new-obj math-token-id-index (if (equal type :operator) src type))
-    (aset new-obj math-token-src-index src)
-    (aset new-obj math-token-file-index (buffer-name))
-    (aset new-obj math-token-line-index (line-number-at-pos (point)))
-    (aset new-obj math-token-begin-index nil)
-    (aset new-obj math-token-end-index nil)
-    (aset new-obj math-token-level-index (nth 0 (syntax-ppss)))
+    (aset new-obj math-token-class-index class)
+    (aset new-obj math-token-source-index source)
+    (aset new-obj math-token-begin-index (- (point) (if (stringp source) (length source) 1)))
+    (aset new-obj math-token-end-index (point))
     new-obj))
 
-;; Getting the left-bp, right-bp, nud-parse, led-parse, id and src attributes for a token.
+;; Getting the attributes.
 ;;
 (defun math-token-nud-left-bp (token)
   "The nud left binding power for token."
@@ -50,21 +44,26 @@
   "The led parsing function for token."
   (aref token math-token-led-fn-index))
 
-(defun math-token-id (token)
-  "The identifier for token."
-  (aref token math-token-id-index))
+(defun math-token-class (token)
+  "The token class: `:eof' `:eol' `:identifier' `:string' `:number' `:operator'."
+  (aref token math-token-class-index))
 
-(defun math-token-src (token)
+(defun math-token-id (token)
+  "The identifier: Same as class except :operator is replaced by the actual operator string."
+  (let ((class (aref token math-token-class-index)))
+    (if (equal class :operator) (aref token math-token-source-index) class)))
+
+(defun math-token-source (token)
   "The verbatim source code from which token was derived."
-  (aref token math-token-src-index))
+  (aref token math-token-source-index))
 
 (defun math-token-file (token)
   "The source file from which token was derived."
-  (aref token math-token-file-index))
+  (current-buffer-name))
 
 (defun math-token-line (token)
   "The source file line number from which token was derived."
-  (aref token math-token-line-index))
+  (line-number-at-pos (aref token math-token-begin-index)))
 
 (defun math-token-begin (token)
   "The source file column number of the start of the token."
@@ -76,9 +75,9 @@
 
 (defun math-token-level (token)
   "The matchfix depth level for the point just after this token."
-  (aref token math-token-level-index))
+  (nth 0 (syntax-ppss (aref token math-token-end-index))))
 
-;; Setting the left-bp, right-bp, nud-parse, led-parse attributes for a token.
+;; Setting the left-bp, right-bp, nud-parse, led-parse attributes.
 ;;
 (defun math-token-set-nud-left-bp (token bp)
   "Set nud left binding power for token."

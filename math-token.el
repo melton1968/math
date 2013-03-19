@@ -1,8 +1,8 @@
 
-(require 'math-defs)
+(require 'math-token-defs)
 (require 'math-util)
 
-(defun math-start-of-string (&optional backward)
+(defun math-tok-goto-start-of-string (&optional backward)
   "If point is inside of a string, move point to the start of the string.
  If backward is not nil, move to the end of the string."
 
@@ -17,7 +17,7 @@
     (if backward
       (forward-sexp))))
 
-(defun math-start-of-comment (&optional backward)
+(defun math-tok-goto-start-of-comment (&optional backward)
   "If point is inside a comment, move point to the end of the comment. 
 If backward is not nil, move to the beginning of the comment."
 
@@ -32,7 +32,7 @@ If backward is not nil, move to the beginning of the comment."
     (if backward
       (forward-comment 1))))
 
-(defun math-next-token (&optional backward)
+(defun math-tok--token (backward)
   "Consume and return the next lexical token in the buffer
 starting at `point'. If backward is not nil, the previous lexical
 token."
@@ -44,27 +44,19 @@ token."
   (let ((case-fold-search nil))
 
     ;; If point is within a string, move to the beginning of the string.
-    (math-start-of-string backward)
+    (math-tok-goto-start-of-string backward)
 
     ;; Move past any white space.
     (forward-comment (if backward (-(point-max)) (point-max)))
     
-    ;; The point is just before a token. Match the token to one of
-    ;; the token classes described in the math-token-re-alist.
-    (catch 're-match
-      (let ((looking (if backward (lambda (re) (looking-back re (point-min) t)) 'looking-at ))
-	    (match (if backward 'match-beginning 'match-end)))
-	(dolist (pair math-token-re-alist)
-	  (if (funcall looking (cdr pair))
-	      (progn
-		(goto-char (funcall match 0))
-		(throw 're-match (math-token-make-instance 
-				  (car pair) 
-				  (match-string-no-properties 0)))))))
+    ;; The point is just before a token.
+    (let ((looking (if backward (lambda (re) (looking-back re (point-min) t)) 'looking-at ))
+	  (match (if backward 'match-beginning 'match-end)))
 
       (cond 
        ;; If we are at the end of the buffer, return the end token.
-       ((= (point) (point-max)) (math-token-make-instance math-token-eof math-token-eof))
+       ((= (point) (point-max)) 
+	(math-token-make-instance :eof :eof))
        
        ;; If we are looking at a newline
        ((= (char-after (point)) ?\n)
@@ -72,51 +64,83 @@ token."
 	;; If we are at top-level, then return the eol token.
 	;; Otherwise, skip the eol and return the next token.
 	(if (= (nth 0 (syntax-ppss)) 0) 
-	    (math-token-make-instance math-token-eol math-token-eol)
-	  (math-next-token)))
-	
+	    (math-token-make-instance :eol :eol)
+	  (math-tok--token backward)))
+
+       ;; Identifiers
+       ((funcall looking math-tok-identifier-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :identifier (match-string-no-properties 0)))
+
+       ;; Symbols
+       ((funcall looking math-tok-symbol-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :operator (match-string-no-properties 0)))
+       
+       ;; Strings
+       ((funcall looking math-tok-string-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :string (match-string-no-properties 0)))
+
+       ;; Numbers
+       ((funcall looking math-tok-number-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :number (match-string-no-properties 0)))
+
+       ;; Operators
+       ((funcall looking math-tok-operator-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :operator (match-string-no-properties 0)))
+
 	;; Otherwise, we did not recognize the token. Move forward one
 	;; character so we do not get stuck and then return the
 	;; unrecognized token.
        (t 
 	(forward-char 1)
-	(math-token-make-instance math-token-unknown (string (char-before (point)))))))))
+	(math-token-make-instance :unknown (string (char-before (point)))))))))
 
-(defun math-peek-token (&optional backward)
-  "Same as math-next-token except the token is not consumed."
+(defun math-tok-next-token ()
+  (math-tok--token nil))
+
+(defun math-tok-prev-token ()
+  (math-tok--token t))
+
+(defun math-tok-peek-next-token ()
   (save-excursion
-    (math-next-token backward)))
+    (math-tok-next-token)))
 
-(defun math-next-token-command ()
+(defun math-tok-peek-prev-token ()
+  (save-excursion
+    (math-tok-prev-token)))
+
+(defun math-tok-print-next-token ()
   (interactive)
-  (let ((token (math-next-token nil)))
+  (let ((token (math-tok-next-token)))
     (message "%s" token)))
 
-(defun math-prev-token-command ()
+(defun math-tok-print-prev-token ()
   (interactive)
-  (let ((token (math-next-token t)))
+  (let ((token (math-tok-prev-token)))
     (message "%s" token)))
 
-(defun math-tokenize-region (begin end)
+(defun math-tok-tokenize-region (begin end)
   (interactive "r")
   (save-excursion
     (save-restriction
       (narrow-to-region begin end)
-      (math-tokenize-buffer))))
+      (math-tok-tokenize-buffer))))
 
-(defun math-tokenize-buffer ()
+(defun math-tok-tokenize-buffer ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-tokenize-output*"
-      (let ((last-line 0))
+      (let ((last-line (math-token-line (math-tok-peek-next-token))))
 	(while (< (point) (point-max))
-	  (let* ((token (math-next-token nil))
+	  (let* ((token (math-tok-next-token))
 		 (line (math-token-line token)))
-	    (if (> line last-line)
-		(terpri))
-	    (setq last-line line)
-	    (princ (math-token-src token))
-	    (princ " ")))))))
+	    (if (> line last-line) (terpri))
+	    (princ (format "'%s' " (math-token-source token)))
+	    (setq last-line line)))))))
     
 (provide 'math-token)

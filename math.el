@@ -7,12 +7,12 @@
 (defconst math-mode-map
   (let ((map (make-sparse-keymap)))
     (define-key map [?\C-i] 'math-indent-line)
-    (define-key map [?\C-c ?\C-f] 'math-next-token-command)
-    (define-key map [?\C-c ?\C-b] 'math-prev-token-command)
+    (define-key map [?\C-c ?\C-f] 'math-tok-print-next-token)
+    (define-key map [?\C-c ?\C-b] 'math-tok-print-prev-token)
     (define-key map [?\C-c ?\C-p] 'math-parse-region)
     (define-key map [?\C-c ?p] 'math-parse-buffer)
-    (define-key map [?\C-c ?\C-t] 'math-tokenize-region)
-    (define-key map [?\C-c ?t] 'math-tokenize-buffer)
+    (define-key map [?\C-c ?\C-t] 'math-tok-tokenize-region)
+    (define-key map [?\C-c ?t] 'math-tok-tokenize-buffer)
     map)
   "Keymap for `math-mode'.")
 

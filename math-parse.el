@@ -243,9 +243,9 @@
 
 ;; Literals
 ;;
-(math-register-nud math-token-number 0 'math-parse-nud-literal)
-(math-register-nud math-token-string 0 'math-parse-nud-literal)
-(math-register-nud math-token-name   0 'math-parse-nud-literal)
+(math-register-nud :identifier 0 'math-parse-nud-literal)
+(math-register-nud :string 0 'math-parse-nud-literal)
+(math-register-nud :number 0 'math-parse-nud-literal)
 
 ;; expr::string          --> MessageName[expr,"string"]
 ;; expr::string::string  --> MessageName[expr,"string"]
@@ -310,10 +310,7 @@
 (math-register-symbol "]")
 (math-register-symbol ")")
 (math-register-symbol "}")
-(math-register-symbol math-token-eof)
-(math-register-symbol math-token-eol)
-
-;; Symbols that terminate an expression when they appear at top level before a newline.
-(defconst top-level-enders-re '(";" "]" ")" "}" :number :string :name))
+(math-register-symbol :eof)
+(math-register-symbol :eol)
 
 (provide 'math-parse)
