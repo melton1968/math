@@ -1,5 +1,5 @@
 
-(require 'math-token)
+(require 'math-util)
 
 ;; `nud' parse methods.
 ;;
@@ -13,37 +13,34 @@
 ;; Parse `operator expression' --> (operator expression)
 ;; token: operator
 (defun math-parse-nud-prefix (token)
-  `(,(math-token-id token) ,(math-parse-expression (math-token-nud-left-bp token))))
+  (let* ((name (math-token-nud-name token))
+	 (head (if name name (math-token-id token)))
+	 (expr (math-parse-expression (math-token-nud-bp token))))
+    `(,head ,expr)))
 
 ;; Parse `literal' --> value
 ;; token: literal
 (defun math-parse-nud-literal (token)
-  (math-token-source token))
+  (let* ((name (math-token-nud-name token))
+	 (head (if name name (math-token-source token))))
+    head))
 
 ;; Parse `(expression)' --> expression
 ;; token: `('
 (defun math-parse-nud-paren (token)
-  (let ((expression (math-parse-expression 0)))
+  (let ((expr (math-parse-expression 0)))
     (math-parse-expect-closer ")")
-    expression))
+    expr))
 
-;; Parse `{ ???? }' --> expression
+;; Parse `{expr1,expr2,...}' --> (:List expr1 expr2 ...).
 ;; token: `{'
-(defun math-parse-nud-curly (token)
-  (let ((expression (math-parse-expression 0)))
+(defun math-parse-nud-sequence (token)
+  (let ((sequence '(:List)))
+    (while (not (equal (math-token-id math--next-tok) "}"))
+      (math-append-to-list sequence (math-parse-expression 0))
+      (if (equal (math-token-id math--next-tok) ",")
+	  (math-parse-expect-separator ",")))
     (math-parse-expect-closer "}")
-    `(list ,expression)))
-
-;; Parse eof --> nil
-;; token: eof
-(defun math-parse-nud-eof (token)
-  nil)
-
-;; Parse eol --> skip the eol token and try to parse an expression
-;; again.
-;; token: eol
-;;;;;;;;;;;;;;; TODO: is a binding power of 0 correct here?
-(defun math-parse-nud-eol (token)
-  (math-parse-expression 0))
+    sequence))
 
 (provide 'math-nud)

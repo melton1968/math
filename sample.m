@@ -60,7 +60,7 @@ mxMakeInterval[HoldPattern[And[x: (_Less|_LessEqual|_GreaterEqual|_Greater|_Ineq
 (***
     Catch all for errors.
     ***)
-mxMakeInterval[expr_] := (Message[mxMakeInterval::badarg, expr]; Return $fail;)
+(*mxMakeInterval[expr_] := (Message[mxMakeInterval::badarg, expr]; Return $fail;)*)
     
     (*** 
      

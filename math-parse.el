@@ -80,8 +80,7 @@
 ;;
 
 
-(require 'math-parse-util)
-(require 'math-token)
+(require 'math-parse-defs)
 
 (defconst math--tok nil
   "The current parser token.")
@@ -105,19 +104,12 @@
 
 (defun math-parse-advance-token ()
   "Get the next token and set its properties based on the parser tables."
-  (let* ((token (math-tok-next-token))
-	 (id (math-token-id token)))
-    (math-token-set-nud-left-bp token (math-get-table id math-nud-left-bp-table))
-    (math-token-set-nud-fn token (math-get-table id math-nud-fn-table))
-    (math-token-set-led-left-bp token (math-get-table id math-led-left-bp-table))
-    (math-token-set-led-fn token (math-get-table id math-led-fn-table))
-    (setq math--tok math--next-tok)
-    (setq math--next-tok token)))
+  (setq math--tok math--next-tok)
+  (setq math--next-tok (math-tok-next-token)))
 
-(defun math-parse-peek-led-left-bp ()
+(defun math-parse-peek-led-bp ()
   "The left binding power of the next token."
-  (let* ((id (math-token-id math--next-tok))
-	 (bp (math-get-table id math-led-left-bp-table)))
+  (let ((bp (math-token-led-bp math--next-tok)))
     (if bp bp (math-parse-error 
 	       (format "No left binding power for operator `%s'." id) 
 	       math--next-tok))))
@@ -167,7 +159,7 @@
 
       ;; As long as the next token's binding power is higher than the
       ;; current right-bp, keep processing led expressions.
-      (while (< right-bp (math-parse-peek-led-left-bp))
+      (while (< right-bp (math-parse-peek-led-bp))
 
 	  ;; Get the next token.
 	  (math-parse-advance-token)
@@ -248,114 +240,5 @@
 	  (princ "\n\n")
 	  (princ "Parse:\n\n")
 	  (pp (math-parse-program)))))))
-
-
-;; Operator Definitions.
-;;
-(setq math-nud-left-bp-table (make-hash-table :test 'equal))
-(setq math-nud-fn-table (make-hash-table :test 'equal))
-(setq math-led-left-bp-table (make-hash-table :test 'equal))
-(setq math-led-fn-table (make-hash-table :test 'equal))
-
-;; Literals
-;;
-(math-register-nud :identifier 0 'math-parse-nud-literal)
-(math-register-nud :string 0 'math-parse-nud-literal)
-(math-register-nud :number 0 'math-parse-nud-literal)
-(math-register-nud "\\[Infinity]"' 0 'math-parse-nud-literal)
-
-;; expr::string          --> MessageName[expr,"string"]
-;; expr::string::string  --> MessageName[expr,"string"]
-(math-register-led-left "::" 780)
-
-;; name[expr1,expr2,...]
-;;
-(math-register-led "[" 745 'math-parse-led-sequence)
-
-;; ?? Grouping operators ?? I do not know where these should go.
-(math-register-nud "(" 745 'math-parse-nud-paren)
-(math-register-nud "{" 745 'math-parse-nud-curly)
-
-
-;; expr1 /@  expr2  -->  Map[expr1,expr2]
-;; expr1 //@ expr2  -->  MapAll[expr1,expr2]
-;; expr1 @@  expr2  -->  Apply[expr1,expr2]
-;; expr1 @@@ expr2  -->  Apply[expr1,expr2,{1}]
-(math-register-led-right "/@" 640)
-(math-register-led-right "//@" 640)
-(math-register-led-right "@@" 640)
-(math-register-led-right "@@@" 640)
-
-;; Unary mathematical operators
-;;
-(math-register-nud-prefix "+" 490)
-(math-register-nud-prefix "-" 490)
-
-;; Binary mathematical operators
-;;
-(math-register-led-flat "+" 330)
-(math-register-led-flat "-" 330)
-(math-register-led-left "*" 410)
-(math-register-led-left "/" 480)
-(math-register-led-right "^" 590)
-
-;; expr..                   --> Repeated[expr]
-;; expr...                  --> RepeatedNull[expr]
-(math-register-led-postfix ".." 170)
-(math-register-led-postfix "..." 170)
-
-;; expr1|expr2              --> Alternatives[expr1,expr2] 
-(math-register-led-flat "|" 160)
-
-;; symb:expr                --> Pattern[symb,expr]
-;; patt:expr                --> Optional[patt,expr]
-(math-register-led-left ":" 150)
-
-;; expr1 -> expr2    --> Rule[expr1,expr2]
-;; expr1 :> expr2    --> RuleDelayed[expr1,expr2]
-(math-register-led-right "->" 120)
-(math-register-led-right ":>" 120)
-
-;; expr1   = expr2          --> Set[expr1,expr2]
-;; expr1  := expr2          --> SetDelayed[expr1,expr2]
-;; expr1  ^= expr2          --> Upset[expr1,expr2]
-;; expr1 ^:= expr2          --> UpsetDelayed[expr1,expr2]
-;; expr =.                  --> Uset[expr]
-;; expr1 |-> expr2          --> Function[{expr1},expr2]
-;; symb /: expr1  = expr2   --> TagSet[symb,expr1,expr2]
-;; symb /: expr1 := expr2   --> TagSetDelayed[symb,expr1,expr2]
-;; symb /: expr1 =.         --> TagUnset[expr]
-(math-register-led-right "=" 40)
-(math-register-led-right ":=" 40)
-(math-register-led-right "^=" 40)
-(math-register-led-right "=." 40)
-(math-register-led-right "|->" 40)
-
-;; expr>>filename      --> Put[expr,"filename"]
-;; expr>>>filename     --> PutAppend[expr,"filename"]
-(math-register-led-left ">>" 30)
-(math-register-led-left ">>>" 30)
-
-;; expr1;expr2;expr3   --> CompoundExpression[expr1,expr2,expr3]
-;; expr1;expr2;        --> CompoundExpression[expr1,expr2,Null]
-;;
-;; TODO - add lookahead in tokenizer for ws to eol so that the eos
-;; parser can check for the second version and add the Null marker.
-;;(math-register-led-flat ";" 20)
-
-;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
-(math-register-led-right "\\`" 10)
-
-;; Separators need to be registered.
-(math-register-symbol ",")
-
-;; Closers need to be registered.
-(math-register-symbol ";")
-(math-register-symbol "]")
-(math-register-symbol ")")
-(math-register-symbol "}")
-(math-register-symbol :eof)
-(math-register-symbol :eol)
-
 
 (provide 'math-parse)

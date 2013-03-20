@@ -5,17 +5,52 @@
   "Appends elem to the end of list."
   (setcdr (last list) (cons elem nil)))
 
-;; Creating and manipulating instances of the math-token class.
+;; math-attributes class
 ;;
-(defconst math-token-nud-left-bp-index 0 "The nud-left-bp")
-(defconst math-token-nud-fn-index 1 "The nud-fn")
-(defconst math-token-led-left-bp-index 2 "The led-left-bp")
-(defconst math-token-led-fn-index 3 "The led-fn")
-(defconst math-token-class-index 4 "The token class.")
-(defconst math-token-source-index 5 "The verbatim source code.")
-(defconst math-token-begin-index 6 "The point just before token.")
-(defconst math-token-end-index 7 "The point just after token.")
-(defconst math-token-last-index 8 "The number of slots")
+(defconst math-attributes-bp-index 0 "The binding power.")
+(defconst math-attributes-fn-index 1 "The parsing function.")
+(defconst math-attributes-name-index 2 "The name.")
+(defconst math-attributes-last-index 3 "The number of slots.")
+
+(defun math-attributes-make-instance (bp fn name)
+  "Create a attributes instance."
+  (let ((new-obj (make-vector math-attributes-last-index nil)))
+    (aset new-obj math-attributes-bp-index bp)
+    (aset new-obj math-attributes-fn-index fn)
+    (aset new-obj math-attributes-name-index name)
+    new-obj))
+
+(defun math-attributes-bp (attrs)
+  "The binding power attribute."
+  (aref attrs math-attributes-bp-index))
+
+(defun math-attributes-fn (attrs)
+  "The parsing function attribute."
+  (aref attrs math-attributes-fn-index))
+
+(defun math-attributes-name (attrs)
+  "The name attribute."
+  (aref attrs math-attributes-name-index))
+
+;; Getting and setting attributes in the parser tables.
+;;
+(defun math-get-attributes (key table)
+  (let ((attrs (gethash key table)))
+    (unless attrs (error "No attributes for `%s' in parser table `%s'" key table))
+    attrs))
+
+(defun math-set-attributes (key attrs table)
+  (let ((attrs (gethash key table)))
+    (if attrs (error "Attributes already set for `%s' in parser table `%s'" key table)))
+  (puthash key attrs table))
+
+;; math-token class
+;;
+(defconst math-token-class-index 0 "The token class.")
+(defconst math-token-source-index 1 "The verbatim source code.")
+(defconst math-token-begin-index 2 "The point just before token.")
+(defconst math-token-end-index 3 "The point just after token.")
+(defconst math-token-last-index 4 "The number of slots")
 
 (defun math-token-make-instance (class source)
   "Create a token instance."
@@ -26,23 +61,31 @@
     (aset new-obj math-token-end-index (point))
     new-obj))
 
-;; Getting the attributes.
+;; Getting the token attributes.
 ;;
-(defun math-token-nud-left-bp (token)
-  "The nud left binding power for token."
-  (aref token math-token-nud-left-bp-index))
+(defun math-token-nud-name (token)
+  "The nud name for token."
+  (math-attributes-name (math-get-attributes (math-token-id token) math-nud-table)))
+
+(defun math-token-nud-bp (token)
+  "The nud binding power for token."
+  (math-attributes-bp (math-get-attributes (math-token-id token) math-nud-table)))
 
 (defun math-token-nud-fn (token)
   "The nud parsing function for token."
-  (aref token math-token-nud-fn-index))
+  (math-attributes-fn (math-get-attributes (math-token-id token) math-nud-table)))
 
-(defun math-token-led-left-bp (token)
-  "The led left binding power for token."
-  (aref token math-token-led-left-bp-index))
+(defun math-token-led-name (token)
+  "The led name for token."
+  (math-attributes-name (math-get-attributes (math-token-id token) math-led-table)))
+
+(defun math-token-led-bp (token)
+  "The led binding power for token."
+  (math-attributes-bp (math-get-attributes (math-token-id token) math-led-table)))
 
 (defun math-token-led-fn (token)
   "The led parsing function for token."
-  (aref token math-token-led-fn-index))
+  (math-attributes-fn (math-get-attributes (math-token-id token) math-led-table)))
 
 (defun math-token-class (token)
   "The token class: `:eof' `:eol' `:identifier' `:string' `:number' `:operator'."
@@ -76,23 +119,5 @@
 (defun math-token-level (token)
   "The matchfix depth level for the point just after this token."
   (nth 0 (syntax-ppss (aref token math-token-end-index))))
-
-;; Setting the left-bp, right-bp, nud-parse, led-parse attributes.
-;;
-(defun math-token-set-nud-left-bp (token bp)
-  "Set nud left binding power for token."
-  (aset token math-token-nud-left-bp-index bp))
-
-(defun math-token-set-nud-fn (token fn)
-  "Set nud parsing function for token."
-  (aset token math-token-nud-fn-index fn))
-
-(defun math-token-set-led-left-bp (token bp)
-  "Set led left binding power for token."
-  (aset token math-token-led-left-bp-index bp))
-
-(defun math-token-set-led-fn (token fn)
-  "Set led parsing function for token."
-  (aset token math-token-led-fn-index fn))
 
 (provide 'math-util)
