@@ -46,7 +46,7 @@
 
 ;; expr::string          --> MessageName[expr,"string"]
 ;; expr::string::string  --> MessageName[expr,"string"]
-(math-register-led-left "::" 780 :MessageName)
+(math-register-led-left "::" 780 'MessageName)
 
 ;; name[expr1,expr2,...]
 ;;
@@ -60,43 +60,43 @@
 ;; expr1 //@ expr2  -->  MapAll[expr1,expr2]
 ;; expr1 @@  expr2  -->  Apply[expr1,expr2]
 ;; expr1 @@@ expr2  -->  Apply[expr1,expr2,{1}]
-(math-register-led-right "/@" 640 :Map)
-(math-register-led-right "//@" 640 :MapAll)
-(math-register-led-right "@@" 640 :Apply)
-(math-register-led-right "@@@" 640 :Apply)
+(math-register-led-right "/@" 640 'Map)
+(math-register-led-right "//@" 640 'MapAll)
+(math-register-led-right "@@" 640 'Apply)
+(math-register-led-right "@@@" 640 'Apply)
 
-(math-register-led-right "^" 590 :Power)
+(math-register-led-right "^" 590 'Power)
 
 ;;
 (math-register-nud-prefix "+" 490)
 (math-register-nud-prefix "-" 490)
 
 ;;
-(math-register-led-left "/" 480 :Divide)
+(math-register-led-left "/" 480 'Divide)
 
 ;;
-(math-register-led-left "*" 410 :Times)
+(math-register-led-left "*" 410 'Times)
 
 ;;
-(math-register-led-flat "+" 330 :Plus)
-(math-register-led-flat "-" 330 :Minus)
+(math-register-led-flat "+" 330 'Plus)
+(math-register-led-flat "-" 330 'Minus)
 
 ;; expr..                   --> Repeated[expr]
 ;; expr...                  --> RepeatedNull[expr]
-(math-register-led-postfix ".." 170 :Repeated)
-(math-register-led-postfix "..." 170 :RepeatedNull)
+(math-register-led-postfix ".." 170 'Repeated)
+(math-register-led-postfix "..." 170 'RepeatedNull)
 
 ;; expr1|expr2              --> Alternatives[expr1,expr2] 
-(math-register-led-flat "|" 160 :Alternatives)
+(math-register-led-flat "|" 160 'Alternatives)
 
 ;; symb:expr                --> Pattern[symb,expr]
 ;; patt:expr                --> Optional[patt,expr]
-(math-register-led-left ":" 150 :Pattern)
+(math-register-led-left ":" 150 'Pattern)
 
 ;; expr1 -> expr2    --> Rule[expr1,expr2]
 ;; expr1 :> expr2    --> RuleDelayed[expr1,expr2]
-(math-register-led-right "->" 120 :Rule)
-(math-register-led-right ":>" 120 :RuleDelayed)
+(math-register-led-right "->" 120 'Rule)
+(math-register-led-right ":>" 120 'RuleDelayed)
 
 ;; expr1   = expr2          --> Set[expr1,expr2]
 ;; expr1  := expr2          --> SetDelayed[expr1,expr2]
@@ -107,18 +107,18 @@
 ;; symb /: expr1  = expr2   --> TagSet[symb,expr1,expr2]
 ;; symb /: expr1 := expr2   --> TagSetDelayed[symb,expr1,expr2]
 ;; symb /: expr1 =.         --> TagUnset[expr]
-(math-register-led-right "=" 40 :Set)
-(math-register-led-right ":=" 40 :SetDelayed)
-(math-register-led-right "^=" 40 :Upset)
-(math-register-led-right "=." 40 :UpsetDelayed)
-(math-register-led-right "|->" 40 :UnSet)
-(math-register-led-right "/:" 40 :Tag)
+(math-register-led-right "=" 40 'Set)
+(math-register-led-right ":=" 40 'SetDelayed)
+(math-register-led-right "^=" 40 'Upset)
+(math-register-led-right "=." 40 'UpsetDelayed)
+(math-register-led-right "|->" 40 'UnSet)
+(math-register-led-right "/:" 40 'Tag)
 ;;(math-register-led-tagset "/:" 40 :Tag)
 
 ;; expr>>filename      --> Put[expr,"filename"]
 ;; expr>>>filename     --> PutAppend[expr,"filename"]
-(math-register-led-left ">>" 30 :Put)
-(math-register-led-left ">>>" 30 :PutAppend)
+(math-register-led-left ">>" 30 'Put)
+(math-register-led-left ">>>" 30 'PutAppend)
 
 ;; expr1;expr2;expr3   --> CompoundExpression[expr1,expr2,expr3]
 ;; expr1;expr2;        --> CompoundExpression[expr1,expr2,Null]
@@ -128,7 +128,7 @@
 ;;(math-register-led-flat ";" 20)
 
 ;; expr1 \` expr2      --> FormBoxp[expr2,expr1]
-(math-register-led-right "\\`" 10 :FormBox)
+(math-register-led-right "\\`" 10 'FormBox)
 
 ;; Separators need to be registered.
 (math-register-symbol ",")

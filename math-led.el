@@ -51,11 +51,11 @@
 ;; variable number of expressions.
 (defun math-parse-led-flat (l-expr token)
   (let ((r-expr (math-parse-expression (math-token-led-bp token))))
-    (let ((expressions `(,l-expr ,r-expr)))
+    (let ((expressions `(,(math-token-id token) ,l-expr ,r-expr)))
       (while (equal (math-parse-peek-led-id) (math-token-id token))
 	(math-parse-advance-token)
 	(math-append-to-list expressions (math-parse-expression (math-token-led-bp token))))
-      (cons (math-token-id token) expressions))))
+      expressions)))
 
 ;; Parse `expr1 operator' --> (operator expr1)
 ;; token: operator

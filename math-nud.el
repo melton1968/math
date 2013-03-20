@@ -35,7 +35,7 @@
 ;; Parse `{expr1,expr2,...}' --> (:List expr1 expr2 ...).
 ;; token: `{'
 (defun math-parse-nud-sequence (token)
-  (let ((sequence '(:List)))
+  (let ((sequence `(,'List)))
     (while (not (equal (math-token-id math--next-tok) "}"))
       (math-append-to-list sequence (math-parse-expression 0))
       (if (equal (math-token-id math--next-tok) ",")
