@@ -9,7 +9,7 @@
 	  ((nth 4 ppss) :comment-context)
 	  (t :code-context))))
 
-(defun math-indent-line ()
+(defun math-indent ()
   (interactive)
   (let ((point 
 	 (save-excursion
@@ -21,11 +21,11 @@
     (if (numberp point)
 	(goto-char point))))
 
-(defun mant-indent-fill ()
+(defun math-fill ()
   (interactive)
   (save-excursion
     (let ((context (math-ind-context)))
-      (cond ((eq context :comment-context) (math-ind-fill-comment))
+      (cond ((eq context :comment-context) (math-comment-fill))
 	    (t nil)))))
 
 (provide 'math-indent)

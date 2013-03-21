@@ -62,49 +62,24 @@
 ;; `offset' - The relative offset from the anchor.
 ;;
 
-(defvar math-comment-first-line-fill-option :own-line
+(require 'math-link)
+
+(defconst math-comment-first-line-fill-option 'next-line
   "How to handle the first line of a comment when doing a
   fill-paragraph.
 
-`:verbatim' - Leave the first line as it appears.
-`:own-line' - Put the comment start string on the first line by itself.
-`:fill-to'  - Fill the text starting immediately after the comment start string.
+'adjacent  - Fill the text starting immediately after the comment delimiter.
+'next-line - Fill the text starting on the line after the comment delimiter.
+'verbatim  - Same as next line, except leave the first line as is.
 ")
 
-(defvar math-comment-last-line-fill-option :own-line
+(defconst math-comment-last-line-fill-option 'next-line
   "How to handle the last line of a comment when doing a fill-paragraph.
 
-`:verbatim' - Leave the last line as it appears.
-`:own-line' - Put the comment end string on the last line by itself.
-`:fill-to'  - Fill the text right up to the comment end string.
+'adjacent      - Fill the text right up to the comment delimiter.
+'previous-line - Fill the text up to the line before the comment delimiter.
+'verbatim      - Same as previous line, except leave the last line as is.
 ")
-
-(defconst math-link-target-index 0 "The target element to be indented.")
-(defconst math-link-source-index 1 "The source element relative to which indent.")
-(defconst math-link-offset-index 2 "The relative offset.")
-(defconst math-link-start-index 3 "Link to start of source element.")
-(defconst math-link-last-index 4 "The number of slots.")
-
-(defun math-link (target source offset &optional start)
-  "Create an indentation link for target relative to source."
-  (let ((new-obj (make-vector math-link-last-index nil)))
-    (aset new-obj math-link-target-index target)
-    (aset new-obj math-link-source-index source)
-    (aset new-obj math-link-offset-index offset)
-    (aset new-obj math-link-start-index start)
-    new-obj))
-
-(defun math-link-target (link)
-  (aref link math-link-target-index))
-
-(defun math-link-source (link)
-  (aref link math-link-source-index))
-
-(defun math-link-offset (link)
-  (aref link math-link-offset-index))
-
-(defun math-link-start (link)
-  (aref link math-link-start-index))
 
 (defconst math-indent-list 
   (list 
@@ -122,35 +97,40 @@
 	(setq list (cdr list))))
     result))
 
-(defun math-column-at-pos (pos)
+(defun math-c--column-at-pos (pos)
   (save-excursion 
     (goto-char pos) 
     (current-column)))
 
-(defun math-comment-start-element ()
-  "The extent of the start comment sequence as the pair (begin . end)"
+(defun math-c--start-delimiter ()
+  ;; Return a pair of positions that delimit the comment start
+  ;; sequence. The comment start sequence is consider the comment
+  ;; start delimiter `(*' followed by any addition adjacent `*'
+  ;; characters.
   (save-excursion
     (let ((begin-comment (nth 8 (syntax-ppss))))
       (goto-char begin-comment)
       (let ((begin (point)))
 	(goto-char (+ begin (length comment-start)))
-	(while (equal (char-before (point)) (char-after (point)))
+	(while (equal (char-before) (char-after))
 	  (forward-char 1))
 	(cons begin (point))))))
 
-(defun math-comment-end-element ()
-  "The extent of the end comment sequence as the pair (begin . end)"
+(defun math-c--end-delimiter ()
+  ;; Return a pair of positions that delimit the comment end
+  ;; sequence. The comment end sequence is consider the comment end
+  ;; delimiter `*)' preceded by any adjacent `*' characters.
   (save-excursion
     (let ((begin-comment (nth 8 (syntax-ppss))))
       (goto-char begin-comment)
       (forward-comment 1)
       (let ((end (point)))
 	(goto-char (- end (length comment-end)))
-	(while (equal (char-before (point)) (char-after (point)))
+	(while (equal (char-before) (char-after))
 	  (backward-char 1))
 	(cons (point) end)))))
 
-(defun math-comment-last-line-p ()
+(defun math-c--last-line-p ()
   "Is point on the last line of a comment?"
   (save-excursion 
     (let ((current-line (line-number-at-pos (point))))
@@ -159,21 +139,130 @@
       (let ((last-line (line-number-at-pos (point))))
 	(= current-line last-line)))))
 
+(defun math-c--perform-indent (column)
+  (indent-line-to column)
+  (move-to-column column t)
+  (point))
+
+(defun math-c--apply-first-line-fill-option ()
+;; Apply the `math-comment-first-line-fill-option' and return the start
+;; position of the comment text which will be the positon of point.
+;;
+;; The point is assumed to be within the comment.
+  (let ((delimiter (math-c--start-delimiter)))
+    (goto-char (cdr delimiter))
+    (cond
+
+     ;; The comment text starts immediately after the comment delimiter.
+     ((equal 'adjacent math-comment-first-line-fill-option)
+      ;; If necessary, insert a space so that there is a space between
+      ;; the comment delimiter and the comment text.
+      (if (not (equal (char-after) ?\s))
+	  (insert-char ?\s))
+      ;; Move past the space and return the position.
+      (forward-char 1)
+      (point))
+
+     ;; The comment start sequence is on its own line.
+     ((equal 'next-line math-comment-first-line-fill-option)
+      ;; Delete any whitespace immediately following the comment
+      ;; delimiter.
+      (if (looking-at "[[:blank:]]*")
+	  (delete-region (match-beginning 0) (match-end 0)))
+      ;; If necessary, insert a newline so that the comment delimiter
+      ;; is on its own line.
+      (if (not (equal (char-after) ?\n))
+	  (newline))
+      ;; Move past the newline and return the position.
+      (forward-char 1)
+      (point))
+
+     ;; The first line of the comment is left as is and the comment
+     ;; text starts on the next line.
+     ((equal 'verbatim math-comment-first-line-fill-option)
+      (forward-line 1)
+      (point))
+
+     (t
+      (message 
+       "math-comment: `%s' is not implemented as a math-comment-first-line-fill-option"
+       math-comment-first-line-fill-option)
+      (point)))))
+
+(defun math-c--apply-last-line-fill-option ()
+;; Apply the `math-comment-last-line-fill-option' and return the end
+;; position of the comment text which will be the positon of point.
+;;
+;; The point is assumed to be within the comment.
+  (let ((delimiter (math-c--end-delimiter)))
+    (goto-char (car delimiter))
+    (cond
+
+     ;; The comment text starts immediately before the comment delimiter.
+     ((equal 'adjacent math-comment-last-line-fill-option)
+      ;; If necessary, insert a space so that there is a space between
+      ;; the comment text and the comment delimiter.
+      (if (not (equal (char-before) ?\s))
+	  (insert-char ?\s)
+	(backward-char 1))
+      (point))
+
+     ;; The comment end sequence is on its own line.
+     ((equal 'next-line math-comment-last-line-fill-option)
+      ;; If necessary, insert a newline so that the comment delimiter
+      ;; is on its own line.
+      (if (looking-back "^[[:blank:]]*")
+	  (forward-line 0)
+	(newline)
+	(forward-char 1)
+	(save-excursion
+	  (math-comment-indent))
+	)
+      (point))
+
+     ;; The last line of the comment is left as is and the comment
+     ;; text ends on the previous line.
+     ((equal 'verbatim math-comment-first-line-fill-option)
+      (forward-line 0)
+      (backward-char 1)
+      (point))
+
+     (t
+      (message 
+       "math-comment: `%s' is not implemented as a math-comment-last-line-fill-option"
+       math-comment-last-line-fill-option)
+      (point)))))
+
+(defun math-comment-fill ()
+  "Fill and indent the comment text."
+  (let ((begin (math-c--apply-first-line-fill-option))
+  	(end (math-c--apply-last-line-fill-option)))
+    (save-restriction
+      (narrow-to-region begin end)
+      (fill-region (point-min) (point-max)))))
+
+;;    begin))
+;;    (let ((left-margin 4))
+;;      (fill-region begin end 'left))))
+  
 (defun math-comment-indent ()
   "Indent the current line and return a new point."
-  (let* ((target (if (math-comment-last-line-p) :comment-last :comment-text))
+  (let* ((target (if (math-c--last-line-p) :comment-last :comment-text))
 	 (link (math-link-lookup target))
 	 (source (math-link-source link)))
     (cond
      ((equal :comment-start source)
-      (let ((start-element (math-comment-start-element)))
-	(let ((pos (if (math-link-start link) (car start-element) (cdr start-element))))
-	  (let ((column (+ (math-link-offset link) (math-column-at-pos pos))))
-	    (indent-line-to column)
-	    (move-to-column column t)
-	    (point)))))
-     (t nil))))
+      (let ((delimiter (math-c--start-delimiter)))
+	(let ((pos (if (math-link-start link) (car delimiter) (cdr delimiter))))
+	  (math-c--perform-indent (+ (math-link-offset link) (math-c--column-at-pos pos))))))
 
-(defun math-comment-fill ())
-  
+     ((equal :bol source)
+      (math-c--perform-indent (+ (math-link-offset link) 0)))
+
+     (t 
+      (message 
+       "math-comment-indent: `%s' is not implemented as a source for the `%s' indentation target"
+       source target)
+      nil))))
+
 (provide 'math-comment)

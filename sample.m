@@ -1,7 +1,15 @@
 
-(*		
-  Sample Mathematica source code file to test `math-mode'
-  *)
+(***
+
+List Item Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality.
+
+List Item Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality.
+
+Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. 
+
+Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. 
+
+ ***)
 
 ClearAll[mxAnd, mxOr, mxInterval, mxMakeInterval, mxIntervalPlot, mxIntervalSymbol];
 

@@ -6,13 +6,14 @@
 
 (defconst math-mode-map
   (let ((map (make-sparse-keymap)))
-    (define-key map [?\C-i] 'math-indent-line)
+    (define-key map [?\C-i] 'math-indent)
+    (define-key map [?\M-q] 'math-fill)
     (define-key map [?\C-c ?\C-f] 'math-tok-print-next-token)
     (define-key map [?\C-c ?\C-b] 'math-tok-print-prev-token)
-    (define-key map [?\C-c ?\C-p] 'math-parse-region)
-    (define-key map [?\C-c ?p] 'math-parse-buffer)
     (define-key map [?\C-c ?\C-t] 'math-tok-tokenize-region)
     (define-key map [?\C-c ?t] 'math-tok-tokenize-buffer)
+    (define-key map [?\C-c ?\C-p] 'math-parse-region)
+    (define-key map [?\C-c ?p] 'math-parse-buffer)
     map)
   "Keymap for `math-mode'.")
 
@@ -30,7 +31,9 @@ The hook `math-mode-hook' is run with no args at mode initialization.
   (set (make-local-variable 'comment-start) "(*")
   (set (make-local-variable 'comment-end) "*)")
   (set (make-local-variable 'comment-use-syntax) t)
-  (set (make-local-variable 'fill-paragraph-fn) 'math-comment-fill)
+  ;;(set (make-local-variable 'fill-paragraph-fn) 'math-comment-fill)
+  ;;(set (make-local-variable 'paragraph-start) "\f\\|[ \t]*$\\|[-*] +.+$")
+  ;;(set (make-local-variable 'paragraph-separate) "$")
   (set (make-local-variable 'parse-sexp-lookup-properties) t)
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
 
