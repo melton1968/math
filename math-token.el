@@ -18,8 +18,8 @@
       (forward-sexp))))
 
 (defun math-tok-goto-start-of-comment (&optional backward)
-  "If point is inside a comment, move point to the end of the comment. 
-If backward is not nil, move to the beginning of the comment."
+  "If point is inside a comment, move point to the beginning of the comment. 
+If backward is not nil, move to the end of the comment."
 
   ;; `(nth 4 (syntax-ppss)' is nil unless point is within a comment.
   ;; `(nth 8 (syntax-ppss)' points to the start of the comment.
@@ -45,6 +45,10 @@ token."
 
     ;; If point is within a string, move to the beginning of the string.
     (math-tok-goto-start-of-string backward)
+
+    ;; If point is within a comment, move to the beginning of the
+    ;; comment.
+    (math-tok-goto-start-of-comment backward)
 
     ;; Move past any white space.
     (forward-comment (if backward (-(point-max)) (point-max)))
@@ -86,6 +90,16 @@ token."
        ((funcall looking math-tok-number-re)
 	(goto-char (funcall match 0))
 	(math-token-make-instance :number (match-string-no-properties 0)))
+
+       ;; Slots
+       ((funcall looking math-tok-slot-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :slot (match-string-no-properties 0)))
+
+       ;; Out
+       ((funcall looking math-tok-out-re)
+	(goto-char (funcall match 0))
+	(math-token-make-instance :out (match-string-no-properties 0)))
 
        ;; Operators
        ((funcall looking math-tok-operator-re)

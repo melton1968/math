@@ -18,6 +18,16 @@
 	 (expr (math-parse-expression (math-token-nud-bp token))))
     `(,head ,expr)))
 
+;; Parse `_' --> (_)
+;; Parse `_expr1' --> (_ expr1)
+;; Token: `_'
+;;;;;;;; TODO - This doesn't handle the first case.
+(defun math-parse-nud-blank (token)
+  (let* ((name (math-token-nud-name token))
+	 (head (if name name (math-token-id token)))
+	 (expr (math-parse-expression (math-token-nud-bp token))))
+    `(,head ,expr)))
+
 ;; Parse `literal' --> value
 ;; token: literal
 (defun math-parse-nud-literal (token)
@@ -39,7 +49,9 @@
     (while (not (equal (math-token-id math--next-tok) "}"))
       (math-append-to-list sequence (math-parse-expression 0))
       (if (equal (math-token-id math--next-tok) ",")
-	  (math-parse-expect-separator ",")))
+	  (math-parse-expect-separator ","))
+      (if (equal (math-token-id math--next-tok) ";")
+	  (math-parse-expect-separator ";")))
     (math-parse-expect-closer "}")
     sequence))
 

@@ -109,11 +109,11 @@
   (line-number-at-pos (aref token math-token-begin-index)))
 
 (defun math-token-begin (token)
-  "The source file column number of the start of the token."
+  "The source file point of the start of the token."
   (aref token math-token-begin-index))
 
 (defun math-token-end (token)
-  "The source file column number of the end of the token."
+  "The source file point of the end of the token."
   (aref token math-token-end-index))
 
 (defun math-token-level (token)

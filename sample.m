@@ -24,24 +24,24 @@ mxMakeInterval[(rop:(Less|LessEqual))[leftValue_, var_, rightValue_]] :=
     mxInterval[rop, leftValue, rightValue, rop];
 
 (***
-    Greater[x,a] and GreaterEqual[x,a]
-    a >  x
-    a >= x    
-    ***)
+   Greater[x,a] and GreaterEqual[x,a]
+   a >  x
+   a >= x    
+ ***)
 mxMakeInterval[(rop:(Greater|GreaterEqual))[var_, value_]] :=
     mxInterval[rop, value, \[Infinity], GreaterEqual];
 
 (***
-    Greater[a,x,b] and GreaterEqual[a,x,b]
-    a >  x >  b 
-    a >= x >= b    
-    ***)
+   Greater[a,x,b] and GreaterEqual[a,x,b]
+   a >  x >  b 
+   a >= x >= b   
+ ***)
 mxMakeInterval[(rop:(Greater|GreaterEqual))[leftValue_, var_, rightValue_]] :=
     mxInterval[rop, leftValue, rightValue, rop];
 
 (***
-    Inequality[a, Less|LessEqual, x, Less|LessEqual, b]
-    ***)
+   Inequality[a, Less|LessEqual, x, Less|LessEqual, b]
+ ***)
 mxMakeInterval[HoldPattern[Inequality[valueLeft_, ropLeft_, var_, ropRight_, valueRight_]]] :=
     mxInterval[ropLeft, valueLeft, valueRight, ropRight];
 
@@ -83,9 +83,13 @@ mxInterval /: MakeBoxes[mxInterval[ropLeft : (Less|LessEqual|Greater|GreaterEqua
 	RowBox[{mxIntervalSymbol[ropLeft, l], MakeBoxes[valueLeft, form], ",", 
 		    MakeBoxes[valueRight, form], mxIntervalSymbol[ropRight, r]}];
 
-(***
+(*** 
     Format disjunction of mxIntervals using union infix operator.
+    This is another line.
+    And another.
+    I need to get newline to do an automatic indent.       
     ***)
+
 mxOr /: MakeBoxes[HoldPattern[mxOr[terms : _mxInterval ..]], form_] :=
 	    RowBox[Riffle[List @@ Replace[HoldComplete[terms], 
 					  elem_ :> Parenthesize[elem, form, Or, True], 
@@ -122,7 +126,7 @@ mxIntervalPlot[mxOr[term__mxInterval]] :=
 		       max = 10.0 (* The maximum number of the exterme right of the number line *)
 		       },
 	   {
-	       range = {Min@#, Max@#} & /@ { 
+	       range = {Min@#, Max@#} & /@ {  
 		   Select[Flatten[
 				  terms /. mxInterval[lop_, lv_, rv_, rop_] :> {lv, rv}],
 			  -\[Infinity] < # < \[Infinity] &]

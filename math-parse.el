@@ -225,7 +225,7 @@
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-parse-output*"
-      (princ (math-parse-program)))))
+      (pp (math-parse-program)))))
 
 (defun math-parse-region (begin end)
   (interactive "r")

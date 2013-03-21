@@ -30,7 +30,7 @@ The hook `math-mode-hook' is run with no args at mode initialization.
   (set (make-local-variable 'comment-start) "(*")
   (set (make-local-variable 'comment-end) "*)")
   (set (make-local-variable 'comment-use-syntax) t)
-
+  (set (make-local-variable 'fill-paragraph-fn) 'math-comment-fill)
   (set (make-local-variable 'parse-sexp-lookup-properties) t)
   (set (make-local-variable 'parse-sexp-ignore-comments) t)
 

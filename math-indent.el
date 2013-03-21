@@ -1,7 +1,8 @@
 
 (require 'math-parse)
+(require 'math-comment)
 
-(defun math-context ()
+(defun math-ind-context ()
   "The context at point: `:comment-context', `:string-context', `:code-context'"
   (let ((ppss (syntax-ppss)))
     (cond ((nth 3 ppss) :string-context)
@@ -10,29 +11,22 @@
 
 (defun math-indent-line ()
   (interactive)
-  (save-excursion
-    (forward-line 0)
-    (let ((context (math-context)))
-      (cond ((eq context :comment-context) (message "comment"))
-	    ((eq context :string-context) (message "string"))
-	    ((eq context :code-context) (message "code"))))))
+  (let ((point 
+	 (save-excursion
+	   (forward-line 0)
+	   (let ((context (math-ind-context)))
+	     (cond ((eq context :comment-context) (math-comment-indent))
+		   ((eq context :string-context) (message "string"))
+		   ((eq context :code-context) (message "code")))))))
+    (if (numberp point)
+	(goto-char point))))
 
-(defun scan-region ()
+(defun mant-indent-fill ()
+  (interactive)
   (save-excursion
-    (with-output-to-temp-buffer "*tokens"
-      (let ((start (region-beginning))
-	    (end (region-end)))
-	(goto-char start)
-	(set-mark end)
-	(if (> (point) (mark))
-	    (exchange-point-and-mark))
-	(while (< (point) (mark))
-	  (setq token (math-forward-token))
-	  (if (and token (> (length token) 0))
-	      (princ (format "<%s> " token))
-	    (let ((start (point)))
-	      (forward-char)
-	      (princ (format " %s " (buffer-substring-no-properties start (point)))))))))))
+    (let ((context (math-ind-context)))
+      (cond ((eq context :comment-context) (math-ind-fill-comment))
+	    (t nil)))))
 
 (provide 'math-indent)
 

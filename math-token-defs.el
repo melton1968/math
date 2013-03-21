@@ -15,8 +15,16 @@
   "[0-9]*\\.?[0-9]+"
   "The regular expression for a Mathematica number.")
 
+(defconst math-tok-slot-re
+  "##?[0-9]*"
+  "The regular expression for a Mathematica slot.")
+
+(defconst math-tok-out-re
+  "%+[0-9]*"
+  "The regular expression for a Mathematica slot.")
+
 (defconst math-tok-operator-list
-  '("::" "#" "%" "_" "<<" "\\+" "\\&" "\\%" "\\_" "\\!" "?" "[" "[[" "]" 
+  '("::" "_" "<<" "\\+" "\\&" "\\%" "\\_" "\\!" "?" "[" "[[" "]" 
     "\\*" "++" "--" "@" "~" "/@" "//" "@@" "@@@" "!" "!!" "*" "'" "<>"
     "^" "\\^" "\\@" "-" "+" "/" "\\/" "*" ";;" "==" "!=" ">" ">=" "<" 
     "<=" "===" "=!=" "&&" "||" ".." "..." "|" ":" "~~" "/;" "->" ":>"
