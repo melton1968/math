@@ -15,7 +15,7 @@
 (defun math-parse-nud-prefix (token)
   (let* ((name (math-token-nud-name token))
 	 (head (if name name (math-token-id token)))
-	 (expr (math-parse-expression (math-token-nud-bp token))))
+	 (expr (math-p--parse-expression (math-token-nud-bp token))))
     `(,head ,expr)))
 
 ;; Parse `_' --> (_)
@@ -25,7 +25,7 @@
 (defun math-parse-nud-blank (token)
   (let* ((name (math-token-nud-name token))
 	 (head (if name name (math-token-id token)))
-	 (expr (math-parse-expression (math-token-nud-bp token))))
+	 (expr (math-p--parse-expression (math-token-nud-bp token))))
     `(,head ,expr)))
 
 ;; Parse `literal' --> value
@@ -38,21 +38,21 @@
 ;; Parse `(expression)' --> expression
 ;; token: `('
 (defun math-parse-nud-paren (token)
-  (let ((expr (math-parse-expression 0)))
-    (math-parse-expect-closer ")")
+  (let ((expr (math-p--parse-expression 0)))
+    (math-p--expect-closer ")")
     expr))
 
 ;; Parse `{expr1,expr2,...}' --> (:List expr1 expr2 ...).
 ;; token: `{'
 (defun math-parse-nud-sequence (token)
   (let ((sequence `(,'List)))
-    (while (not (equal (math-token-id math--next-tok) "}"))
-      (math-append-to-list sequence (math-parse-expression 0))
-      (if (equal (math-token-id math--next-tok) ",")
-	  (math-parse-expect-separator ","))
-      (if (equal (math-token-id math--next-tok) ";")
-	  (math-parse-expect-separator ";")))
-    (math-parse-expect-closer "}")
+    (while (not (equal (math-token-id math-p--next-tok) "}"))
+      (math-append-to-list sequence (math-p--parse-expression 0))
+      (if (equal (math-token-id math-p--next-tok) ",")
+	  (math-p--expect-separator ","))
+      (if (equal (math-token-id math-p--next-tok) ";")
+	  (math-p--expect-separator ";")))
+    (math-p--expect-closer "}")
     sequence))
 
 (provide 'math-nud)
