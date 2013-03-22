@@ -1,14 +1,8 @@
 
+
 (***
-
-List Item Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality.
-
-List Item Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality.
-
-Sqample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill'q functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. 
-
-Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. Sample Mathematica source code file to test `math-mode'. This comment text needs to be long enough to be able to test the `math-comment-fill' functionality. 
-
+   This is a sample Mathematica source code for testing `math-mode'. It doesn't
+   exercise every feature, but has a broad enough range for basic testing.
  ***)
 
 ClearAll[mxAnd, mxOr, mxInterval, mxMakeInterval, mxIntervalPlot, mxIntervalSymbol];
@@ -16,10 +10,10 @@ ClearAll[mxAnd, mxOr, mxInterval, mxMakeInterval, mxIntervalPlot, mxIntervalSymb
 mxMakeInterval::badarg = "The expression `` is not a relational operator (Inequality|Less|LessEqual|GreaterEqual|Greater) nor a logical Or of relational operators.";
 
 (*
-  Less[x,a] and LessEqual[x,a]
-  x <  a
-  x <= a 
-  *) 
+   Less[x,a] and LessEqual[x,a]
+   x <  a
+   nx <= a 
+ *) 
 mxMakeInterval[(rop:(Less|LessEqual))[var_, value_]] :=
     mxInterval[LessEqual, -\[Infinity], value, rop];
 

@@ -23,10 +23,9 @@
 
 (defun math-fill ()
   (interactive)
-  (save-excursion
-    (let ((context (math-ind-context)))
-      (cond ((eq context :comment-context) (math-comment-fill))
-	    (t nil)))))
+  (let ((context (math-ind-context)))
+    (cond ((eq context :comment-context) (math-comment-fill))
+	  (t nil))))
 
 (provide 'math-indent)
 
