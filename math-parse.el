@@ -80,6 +80,7 @@
 ;;
 
 (require 'math-parse-defs)
+(require 'math-tokenize)
 
 (defconst math-p--tok nil
   "The current parser token.")
@@ -91,6 +92,9 @@
 	 (math-token-line token)
 	 msg))
 
+(defun math-p--format-list (infix list)
+  list)
+
 ;; The core parsing methods.
 ;;
 (defun math-p--init ()
@@ -99,6 +103,15 @@
 (defun math-p--advance-token ()
   "Get the next token."
   (setq math-p--tok (math-tokenize-next)))
+
+(defun math-p--expect (elems &optional maybe)
+  (let* ((id (math-token-id math-p--tok))
+	 (match (member id elems)))
+    (unless (or maybe match)
+      (math-p--error
+       (format "Expected %s but read %s instead" (math-p--format-list ", " elems) id)
+       math-p--tok))
+    (if match (math-p--advance-token))))
 
 (defun math-p--expect-closer (closer)
   (let ((id (math-token-id math-p--tok)))
