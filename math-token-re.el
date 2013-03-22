@@ -35,4 +35,4 @@
 (defconst math-tok-operator-re
   (regexp-opt math-tok-operator-list))
 
-(provide 'math-token-defs)
+(provide 'math-token-re)

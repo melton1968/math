@@ -1,8 +1,13 @@
 
-(require 'math-token-defs)
-(require 'math-util)
+;; Tokenization
+;;
+;; External names: math-tokenize-*
+;; Internal names: math-t--*
 
-(defun math-tok-goto-start-of-string (&optional backward)
+(require 'math-token-re)
+(require 'math-token)
+
+(defun math-t--goto-start-of-string (&optional backward)
   "If point is inside of a string, move point to the start of the string.
  If backward is not nil, move to the end of the string."
 
@@ -17,7 +22,7 @@
     (if backward
       (forward-sexp))))
 
-(defun math-tok-goto-start-of-comment (&optional backward)
+(defun math-t--goto-start-of-comment (&optional backward)
   "If point is inside a comment, move point to the beginning of the comment. 
 If backward is not nil, move to the end of the comment."
 
@@ -32,7 +37,7 @@ If backward is not nil, move to the end of the comment."
     (if backward
       (forward-comment 1))))
 
-(defun math-tok--token (backward)
+(defun math-t--advance-token (backward)
   "Consume and return the next lexical token in the buffer
 starting at `point'. If backward is not nil, the previous lexical
 token."
@@ -44,11 +49,11 @@ token."
   (let ((case-fold-search nil))
 
     ;; If point is within a string, move to the beginning of the string.
-    (math-tok-goto-start-of-string backward)
+    (math-t--goto-start-of-string backward)
 
     ;; If point is within a comment, move to the beginning of the
     ;; comment.
-    (math-tok-goto-start-of-comment backward)
+    (math-t--goto-start-of-comment backward)
 
     ;; Move past any white space.
     (forward-comment (if backward (-(point-max)) (point-max)))
@@ -69,7 +74,7 @@ token."
 	;; Otherwise, skip the eol and return the next token.
 	(if (= (nth 0 (syntax-ppss)) 0) 
 	    (math-token-make-instance :eol :eol)
-	  (math-tok--token backward)))
+	  (math-t--advance-token backward)))
 
        ;; Identifiers
        ((funcall looking math-tok-identifier-re)
@@ -113,45 +118,29 @@ token."
 	(forward-char 1)
 	(math-token-make-instance :unknown (string (char-before (point)))))))))
 
-(defun math-tok-next-token ()
-  (math-tok--token nil))
-
-(defun math-tok-prev-token ()
-  (math-tok--token t))
-
-(defun math-tok-peek-next-token ()
-  (save-excursion
-    (math-tok-next-token)))
-
-(defun math-tok-peek-prev-token ()
-  (save-excursion
-    (math-tok-prev-token)))
-
-(defun math-tok-print-next-token ()
+(defun math-tokenize-next ()
   (interactive)
-  (let ((token (math-tok-next-token)))
-    (message "%s" token)))
+  (math-t--advance-token nil))
 
-(defun math-tok-print-prev-token ()
+(defun math-tokenize-prev ()
   (interactive)
-  (let ((token (math-tok-prev-token)))
-    (message "%s" token)))
+  (math-t--advance-token t))
 
-(defun math-tok-tokenize-region (begin end)
+(defun math-tokenize-region (begin end)
   (interactive "r")
   (save-excursion
     (save-restriction
       (narrow-to-region begin end)
-      (math-tok-tokenize-buffer))))
+      (math-tokenize-buffer))))
 
-(defun math-tok-tokenize-buffer ()
+(defun math-tokenize-buffer ()
   (interactive)
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-tokenize-output*"
-      (let ((last-line (math-token-line (math-tok-peek-next-token))))
+      (let ((last-line 0))
 	(while (< (point) (point-max))
-	  (let* ((token (math-tok-next-token))
+	  (let* ((token (math-tokenize-next))
 		 (line (math-token-line token)))
 	    (if (> line last-line) (terpri))
 	    (princ (format "'%s' " (math-token-source token)))

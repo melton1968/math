@@ -79,14 +79,10 @@
 ;; The led for infix '+' calls parse expression to get its right expression.
 ;;
 
-
 (require 'math-parse-defs)
 
 (defconst math-p--tok nil
   "The current parser token.")
-
-(defconst math-p--next-tok nil
-  "The next parser token.")
 
 (defun math-p--error (msg token)
   "Dispatch an error for token with the given message."
@@ -98,42 +94,28 @@
 ;; The core parsing methods.
 ;;
 (defun math-p--init ()
-  (setq math-p--tok nil)
-  (setq math-p--next-tok nil)
   (math-p--advance-token))
 
 (defun math-p--advance-token ()
-  "Get the next token and set its properties based on the parser tables."
-  (setq math-p--tok math-p--next-tok)
-  (setq math-p--next-tok (math-tok-next-token)))
-
-(defun math-p--peek-led-bp ()
-  "The left binding power of the next token."
-  (let ((bp (math-token-led-bp math-p--next-tok)))
-    (if bp bp (math-p--error 
-	       (format "No left binding power for operator `%s'." id) 
-	       math-p--next-tok))))
-
-(defun math-p--peek-led-id ()
-  "The id of next token to be read."
-  (math-token-id math-p--next-tok))
+  "Get the next token."
+  (setq math-p--tok (math-tokenize-next)))
 
 (defun math-p--expect-closer (closer)
-  (math-p--advance-token)
   (let ((id (math-token-id math-p--tok)))
     (unless (equal id closer)
       (math-p--error 
        (format "Exepcted matching %s but read %s instead" closer id) 
-       math-p--tok))))
+       math-p--tok)))
+  (math-p--advance-token))
 
 (defun math-p--expect-separator (closer)
-  (math-p--advance-token)
   (let ((id (math-token-id math-p--tok)))
     (unless (equal id closer)
-      (math-p--error (format "Exepcted %s but read %s instead" closer id) math-p--tok))))
+      (math-p--error (format "Exepcted %s but read %s instead" closer id) math-p--tok)))
+  (math-p--advance-token))
   
 (defun math-p--consume-blank-lines ()
-  (while (equal (math-token-class math-p--next-tok) :eol)
+  (while (equal (math-token-class math-p--tok) :eol)
     (math-p--advance-token)))
 
 (defun math-p--parse-expression (right-bp)
@@ -141,59 +123,56 @@
   ;; Incomplete Mathematica expressions can be continued on the next
   ;; line. Since we are trying to parse an expression, skip over the
   ;; eol markers.
-  ;;(math-p--consume-blank-lines)
-
-  ;; Get the first token of the expression.
-  (math-p--advance-token)
-
-  (while (equal (math-token-class math-p--tok) :eol)
-    (math-p--advance-token))
+  (math-p--consume-blank-lines)
 
   ;; If we see an eof marker here, then this expression is incomplete.
   (if (equal (math-token-class math-p--tok) :eof)
       (math-p--error "Incomplete expression" token))
 
-  ;; Get the nud function for parsing the current token.
-  (let ((nud (math-token-nud-fn math-p--tok)))
+  ;; Get the nud function for the current token.
+  (let* ((token math-p--tok)
+	 (nud (math-token-nud-fn token)))
     (unless nud 
       (math-p--error 
-       (format "No nud function for `%s'" (math-token-source math-p--tok)) 
-       math-p--tok))
+       (format "No nud function for `%s'" (math-token-source token)) token))
 
-    ;; Apply the nud function to get the parsed left sub-expression.
-    (let ((subexpr (funcall nud math-p--tok)))
+    ;; Get the next token.
+    (math-p--advance-token)
 
-      ;; As long as the next token's binding power is higher than the
+    ;; Apply the nud function to get the parsed sub-expression.
+    (let ((subexpr (funcall nud token)))
+
+      ;; As long as the current token's binding power is higher than the
       ;; current right-bp, keep processing led expressions.
-      (while (< right-bp (math-p--peek-led-bp))
+      (while (< right-bp (math-token-led-bp math-p--tok))
 
-	  ;; Get the next token.
-	  (math-p--advance-token)
-
-	  ;; Gett the led function for parsing the current token.
-	  (let ((led (math-token-led-fn math-p--tok)))
+	  ;; Get the led function for parsing the current token.
+	  (let* ((token math-p--tok)
+		 (led (math-token-led-fn token)))
 	    (unless led
 	      (math-p--error
-	       (format "No led function for `%s'" (math-token-source math-p--tok))
-	       math-p--tok))
+	       (format "No led function for `%s'" (math-token-source token) token)))
+
+	    ;; Get the next token.
+	    (math-p--advance-token)
 	    
-	    (setq subexpr (funcall led subexpr math-p--tok))))
+	    ;; Apply the led function to get the parsed sub-expression.
+	    (setq subexpr (funcall led subexpr token))))
       subexpr)))
 
 (defun math-p--parse-statement ()
   "Parse a Mathematica statement."
 
   ;; Discard blank lines.
-  (while (equal (math-token-class math-p--next-tok) :eol)
-    (math-p--advance-token))
+  (math-p--consume-blank-lines)
 
   ;; Read expressions until we find an eol or eof terminated expression.
   (let ((expressions (list 'expressions)))
-    (while (and (not (equal (math-token-class math-p--next-tok) :eol))
-		(not (equal (math-token-class math-p--next-tok) :eof)))
+    (while (and (not (equal (math-token-class math-p--tok) :eol))
+		(not (equal (math-token-class math-p--tok) :eof)))
       (math-append-to-list expressions (math-p--parse-expression 0))
       ;; The expression must be terminated by one of: `;' `eol' `eof'.
-      (let ((id (math-token-id math-p--next-tok)))
+      (let ((id (math-token-id math-p--tok)))
 	(cond
 	 ;; Consume the `;'
 	 ((equal id ";") 
@@ -208,12 +187,10 @@
 	 (t
 	  (math-p--error 
 	   (format "Expected a `;' but read `%s' instead." id)
-	   math-p--next-tok)))))
+	   math-p--tok)))))
 
     ;; Discard blank lines.
-    (while (equal (math-token-class math-p--next-tok) :eol)
-      (math-p--advance-token))
-
+    (math-p--consume-blank-lines)
     expressions))
 
 (defun math-p--parse-program ()
@@ -222,7 +199,7 @@
   (math-p--init)
   ;; Read statements until we see the `eof' token.
   (let ((statements (list 'statements)))
-    (while (not (equal (math-token-class math-p--next-tok) :eof))
+    (while (not (equal (math-token-class math-p--tok) :eof))
       (math-append-to-list statements (math-p--parse-statement)))
     statements))
 

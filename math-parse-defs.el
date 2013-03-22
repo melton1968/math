@@ -1,7 +1,7 @@
 
 (require 'math-nud)
 (require 'math-led)
-(require 'math-util)
+(require 'math-attrs)
 
 (defconst math-nud-table (make-hash-table :test 'equal)
   "Maps a token identifier to it's parser nud attributes.")
@@ -12,7 +12,7 @@
 ;; Methods for registering tokens in the parser tables.
 ;;
 (defun math-register-nud (id bp fn &optional name)
-  (math-set-attributes id (math-attributes-make-instance bp fn name) math-nud-table))
+  (math-attributes-set id (math-attributes-make-instance bp fn name) math-nud-table))
 
 (defun math-register-nud-prefix (id bp &optional name)
   (math-register-nud id bp 'math-parse-nud-prefix name))
@@ -21,7 +21,7 @@
   (math-register-nud id bp 'math-parse-nud-blank name))
 
 (defun math-register-led (id bp fn &optional name)
-  (math-set-attributes id (math-attributes-make-instance bp fn name) math-led-table))
+  (math-attributes-set id (math-attributes-make-instance bp fn name) math-led-table))
 
 (defun math-register-led-flat (id bp &optional name)
   (math-register-led id bp 'math-parse-led-flat name))

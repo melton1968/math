@@ -36,10 +36,10 @@
 ;; requirement: left expression should be a name.
 (defun math-parse-led-sequence (l-expr token)
   (let ((sequence `(,l-expr)))
-    (while (not (equal (math-p--peek-led-id) "]"))
+    (while (not (equal (math-token-id math-p--tok) "]"))
       (let ((expression (math-p--parse-expression 0)))
 	(math-append-to-list sequence expression))
-      (if (equal (math-p--peek-led-id) ",")
+      (if (equal (math-token-id math-p--tok) ",")
 	  (math-p--expect-separator ",")))
     (math-p--expect-closer "]")
     sequence))
@@ -51,8 +51,8 @@
 ;; variable number of expressions.
 (defun math-parse-led-flat (l-expr token)
   (let ((r-expr (math-p--parse-expression (math-token-led-bp token))))
-    (let ((expressions `(,(math-token-id token) ,l-expr ,r-expr)))
-      (while (equal (math-p--peek-led-id) (math-token-id token))
+    (let ((expressions `(,(math-token-led-name token) ,l-expr ,r-expr)))
+      (while (equal (math-token-id math-p--tok) (math-token-id token))
 	(math-p--advance-token)
 	(math-append-to-list expressions (math-p--parse-expression (math-token-led-bp token))))
       expressions)))
