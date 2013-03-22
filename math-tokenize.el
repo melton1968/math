@@ -157,4 +157,4 @@ token."
 	    (princ (format "'%s' " (math-token-source token)))
 	    (setq last-line line)))))))
     
-(provide 'math-token)
+(provide 'math-tokenize)

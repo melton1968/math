@@ -21,7 +21,7 @@
 
 (defconst math-tok-out-re
   "%+[0-9]*"
-  "The regular expression for a Mathematica slot.")
+  "The regular expression for a Mathematica output reference.")
 
 (defconst math-tok-operator-list
   '("::" "_" "<<" "\\+" "\\&" "\\%" "\\_" "\\!" "?" "[" "[[" "]" 

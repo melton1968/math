@@ -2,7 +2,7 @@
 (require 'math-syntax)
 (require 'math-indent)
 (require 'math-parse)
-(require 'math-token)
+(require 'math-tokenize)
 
 (defconst math-mode-map
   (let ((map (make-sparse-keymap)))
