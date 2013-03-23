@@ -36,13 +36,13 @@
 ;; requirement: left expression should be a name.
 (defun math-parse-led-sequence (l-expr token)
   (let ((sequence `(,l-expr)))
-    (while (not (equal (math-token-id math-p--tok) "]"))
+    (while (and (not (equal (math-token-id math-p--tok) "]"))
+		(not (equal (math-token-id math-p--tok) :eof)))
       (let ((expression (math-p--parse-expression 0)))
 	(math-append-to-list sequence expression))
       (if (equal (math-token-id math-p--tok) ",")
 	  (math-p--expect-separator ",")))
-    (math-p--expect-closer "]")
-    sequence))
+    (math-p--closer sequence "]")))
 
 ;; Parse `expr1 operator expr2 ...' --> (operator expr1 expr2 ...)
 ;; token: operator

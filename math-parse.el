@@ -104,14 +104,14 @@
   "Get the next token."
   (setq math-p--tok (math-tokenize-next)))
 
-(defun math-p--expect (elems &optional maybe)
-  (let* ((id (math-token-id math-p--tok))
-	 (match (member id elems)))
-    (unless (or maybe match)
-      (math-p--error
-       (format "Expected %s but read %s instead" (math-p--format-list ", " elems) id)
-       math-p--tok))
-    (if match (math-p--advance-token))))
+(defun math-p--closer (expr closer)
+  (let ((id (math-token-id math-p--tok)))
+    (if (equal id closer)
+	(math-p--advance-token)
+      (math-append-to-list 
+       expr 
+       `(Error ,(format "Expected `%s' but read `%s' instead" closer id))))
+    expr))
 
 (defun math-p--expect-closer (closer)
   (let ((id (math-token-id math-p--tok)))
@@ -140,38 +140,41 @@
 
   ;; If we see an eof marker here, then this expression is incomplete.
   (if (equal (math-token-class math-p--tok) :eof)
-      (math-p--error "Incomplete expression" token))
+      `(Error "Incomplete expression")
 
-  ;; Get the nud function for the current token.
-  (let* ((token math-p--tok)
-	 (nud (math-token-nud-fn token)))
-    (unless nud 
-      (math-p--error 
-       (format "No nud function for `%s'" (math-token-source token)) token))
+    ;; Get the nud function for the current token.
+    (let* ((token math-p--tok)
+	   (nud (math-token-nud-fn token)))
+      (unless nud 
+	(math-p--error 
+	 (format "No nud function for `%s'" (math-token-source token)) token))
+      
+      ;; Get the next token.
+      (math-p--advance-token)
+      
+      ;; Apply the nud function to get the parsed sub-expression.
+      (let ((subexpr (funcall nud token)))
+	(math-p--parse-expression-led subexpr right-bp)))))
 
-    ;; Get the next token.
-    (math-p--advance-token)
+(defun math-p--parse-expression-led (l-expr right-bp)
 
-    ;; Apply the nud function to get the parsed sub-expression.
-    (let ((subexpr (funcall nud token)))
+  ;; As long as the current token's binding power is higher than the
+  ;; current right-bp, keep processing led expressions.
+  (while (< right-bp (math-token-led-bp math-p--tok))
 
-      ;; As long as the current token's binding power is higher than the
-      ;; current right-bp, keep processing led expressions.
-      (while (< right-bp (math-token-led-bp math-p--tok))
-
-	  ;; Get the led function for parsing the current token.
-	  (let* ((token math-p--tok)
-		 (led (math-token-led-fn token)))
-	    (unless led
-	      (math-p--error
-	       (format "No led function for `%s'" (math-token-source token) token)))
-
-	    ;; Get the next token.
-	    (math-p--advance-token)
-	    
-	    ;; Apply the led function to get the parsed sub-expression.
-	    (setq subexpr (funcall led subexpr token))))
-      subexpr)))
+    ;; Get the led function for parsing the current token.
+    (let* ((token math-p--tok)
+	   (led (math-token-led-fn token)))
+      (unless led
+	(math-p--error
+	 (format "No led function for `%s'" (math-token-source token) token)))
+      
+      ;; Get the next token.
+      (math-p--advance-token)
+      
+      ;; Apply the led function to get the parsed sub-expression.
+      (setq subexpr (funcall led subexpr token))))
+  subexpr)
 
 (defun math-p--parse-statement ()
   "Parse a Mathematica statement."
