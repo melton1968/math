@@ -24,7 +24,7 @@
   (math-attributes-set id (math-attributes-make-instance bp fn name) math-led-table))
 
 (defun math-register-led-flat (id bp &optional name)
-  (math-register-led id bp 'math-parse-led-flat name))
+  (math-register-led id bp 'math-parse-led-left name))
 
 (defun math-register-led-left (id bp &optional name)
   (math-register-led id bp 'math-parse-led-left name))

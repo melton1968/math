@@ -29,13 +29,6 @@
   "The name attribute."
   (aref attrs math-a--name-index))
 
-;; Getting and setting attributes in the parser tables.
-;;
-(defun math-attributes-get (key table)
-  (let ((attrs (gethash key table)))
-    (unless attrs (error "No attributes for `%s' in parser table `%s'" key table))
-    attrs))
-
 (defun math-attributes-set (key attrs table)
   (let ((attrs (gethash key table)))
     (if attrs (error "Attributes already set for `%s' in parser table `%s'" key table)))

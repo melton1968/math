@@ -48,7 +48,8 @@
     (while (and (not (equal (math-token-id math-p--tok) "}"))
 		(not (equal (math-token-id math-p--tok) :eof)))
       (math-append-to-list sequence (math-p--parse-expression 0))
-      (math-p--expect '("," ";") t))
+      (math-p--expect ",")
+      (math-p--expect ";"))
     (math-p--closer sequence "}")))
 
 (provide 'math-nud)

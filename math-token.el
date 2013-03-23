@@ -26,27 +26,33 @@
 ;;
 (defun math-token-nud-name (token)
   "The nud name for token."
-  (math-attributes-name (math-attributes-get (math-token-id token) math-nud-table)))
+  (let ((attrs (gethash (math-token-id token) math-nud-table)))
+    (if attrs (math-attributes-name attrs) nil)))
 
 (defun math-token-nud-bp (token)
   "The nud binding power for token."
-  (math-attributes-bp (math-attributes-get (math-token-id token) math-nud-table)))
+  (let ((attrs (gethash (math-token-id token) math-nud-table)))
+    (if attrs (math-attributes-bp attrs) nil)))
 
 (defun math-token-nud-fn (token)
   "The nud parsing function for token."
-  (math-attributes-fn (math-attributes-get (math-token-id token) math-nud-table)))
+  (let ((attrs (gethash (math-token-id token) math-nud-table)))
+    (if attrs (math-attributes-fn attrs) nil)))
 
 (defun math-token-led-name (token)
   "The led name for token."
-  (math-attributes-name (math-attributes-get (math-token-id token) math-led-table)))
+  (let ((attrs (gethash (math-token-id token) math-led-table)))
+    (if attrs (math-attributes-name attrs) nil)))
 
 (defun math-token-led-bp (token)
   "The led binding power for token."
-  (math-attributes-bp (math-attributes-get (math-token-id token) math-led-table)))
+  (let ((attrs (gethash (math-token-id token) math-led-table)))
+    (if attrs (math-attributes-bp attrs))))
 
 (defun math-token-led-fn (token)
   "The led parsing function for token."
-  (math-attributes-fn (math-attributes-get (math-token-id token) math-led-table)))
+  (let ((attrs (gethash (math-token-id token) math-led-table)))
+    (if attrs (math-attributes-fn attrs) nil)))
 
 (defun math-token-class (token)
   "The token class: `:eof' `:eol' `:identifier' `:string' `:number' `:operator'."
