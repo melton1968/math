@@ -39,17 +39,15 @@
 ;; token: `('
 (defun math-parse-nud-paren (token)
   (let ((expr (math-p--parse-expression 0)))
-    (math-p--closer expr ")")))
+    (math-append-to-list expr (math-p--closers ")"))))
 
 ;; Parse `{expr1,expr2,...}' --> (:List expr1 expr2 ...).
 ;; token: `{'
 (defun math-parse-nud-sequence (token)
   (let ((sequence `(,'List)))
-    (while (and (not (equal (math-token-id math-p--tok) "}"))
-		(not (equal (math-token-id math-p--tok) :eof)))
+    (while (math-p--continue-until "}")
       (math-append-to-list sequence (math-p--parse-expression 0))
-      (math-p--expect ",")
-      (math-p--expect ";"))
-    (math-p--closer sequence "}")))
+      (math-append-to-list sequence (math-p--separators-or-closers '("," ";") "}")))
+    (math-append-to-list sequence (math-p--closers "}"))))
 
 (provide 'math-nud)

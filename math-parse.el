@@ -82,62 +82,99 @@
 (require 'math-parse-defs)
 (require 'math-tokenize)
 
-(defconst math-p--tok nil
-  "The current parser token.")
-
-(defun math-p--error (msg token)
-  "Dispatch an error for token with the given message."
-  (error "%s:%d: error: %s" 
-	 (math-token-file token)
-	 (math-token-line token)
-	 msg))
-
-(defun math-p--format-list (infix list)
-  list)
-
-;; The core parsing methods.
+;; Parser Token
 ;;
-(defun math-p--init ()
-  (math-p--advance-token))
+;; `math-p--tok' is the token currently being parsed. It should be
+;; treated as read-only. It updated by math-p--advance-token.
+(defconst math-p--tok nil)
 
+;; The only function that changes `math-p--tok'.
 (defun math-p--advance-token ()
   "Get the next token."
   (setq math-p--tok (math-tokenize-next)))
 
-(defun math-p--closer (expr closer)
-  (let ((id (math-token-id math-p--tok)))
-    (if (equal id closer)
-	(math-p--advance-token)
-      (math-append-to-list 
-       expr 
-       `(Error ,(format "expected `%s' but read `%s' instead" closer id))))
-    expr))
+;; Parser State
+;;
+;; `math-p--parsing' is the state of the parser: t means parsing is in
+;; progress, nil means parsing has stopped.
+(defconst math-p--parsing nil)
 
-(defun math-p--expect (closer)
-  (let ((id (math-token-id math-p--tok)))
-    (if (equal id closer)
-	(math-p--advance-token))))
+;; Initialization
+;;
+;; The parser must be initialized before each attempt to parse a
+;; region or buffer. The initialization queues up the first token and
+;; sets the parser state to 'go.
+(defun math-p--init ()
+  (math-p--advance-token)
+  (setq math-p--parsing t))
 
-(defun math-p--expect-closer (closer)
-  (let ((id (math-token-id math-p--tok)))
-    (unless (equal id closer)
-      (math-p--error 
-       (format "error: expected matching %s but read %s instead" closer id) 
-       math-p--tok)))
-  (math-p--advance-token))
+;; Errors
+;;
+;; Return an error message of the form '(Error "message") with the
+;; appropriate line number of other information and set the parser
+;; state to stopped. `token' caused an error described by `msg'.
+(defun math-p--error (token msg)
+  (setq math-p--parsing nil)
+  `(Error ,msg))
 
-(defun math-p--expect-separator (closer)
-  (let ((id (math-token-id math-p--tok)))
-    (unless (equal id closer)
-      (math-p--error (format "Exepcted %s but read %s instead" closer id) math-p--tok)))
-  (math-p--advance-token))
-  
+;; Append the error returned by `math-p--error' to the given `expr'.
+(defun math-p--error-append (expr token msg)
+  (math-append-to-list expr (math-p--error token msg)))
+
+;; Parsing Helpers
+;;
+
+;; Consume blank lines.
 (defun math-p--consume-blank-lines ()
   (while (equal (math-token-class math-p--tok) :eol)
     (math-p--advance-token)))
 
+;; Return true if id matches an element of list or is equal to symbol.
+(defun math-p--match (id list-or-symbol)
+  (cond
+   ((and (listp list-or-symbol) (member id list-or-symbol)) t)
+   ((and (not (listp list-or-symbol)) (equal id list-or-symbol)) t)
+   (t nil)))
+
+;; Return true if we are parsing the current token does not match
+;; any of the `closers' (a string or list of strings).
+(defun math-p--continue-until (closers)
+  (let ((id (math-token-id math-p--tok)))
+    (and math-p--parsing (not (math-p--match id closers)))))
+
+;; Expecting a closing token.
+;;
+;; 1) If we are not parsing, return nil
+;; 2) If the current token matches `closers', consume the token and return nil.
+;; 3) Otherwise, return the error list.
+;; 
+(defun math-p--closers (closers)
+  (let ((id (math-token-id math-p--tok)))
+    (cond
+     ((not math-p--parsing) nil)
+     ((math-p--match id closers) (math-p--advance-token) nil)
+     (t (math-p--error math-p--tok (format "expected `%s' but read `%s' instead" closers id))))))
+
+;; Expecting either a separator or a closing token.
+;;
+;; 1) If we are not parsing, return nil.
+;; 2) If the current token matches `separators', consume the token and return nil.
+;; 3) If the current token matches `closers', return nil.
+;; 4) Otherwise, return the errro list.
+(defun math-p--separators-or-closers (separators closers)
+  (let ((id (math-token-id math-p--tok)))
+    (cond
+     ((not math-p--parsing) nil)
+     ((math-p--match id separators) (math-p--advance-token) nil)
+     ((math-p--match id closers) nil)
+     (t 
+      (math-p--error 
+       math-p--tok 
+       (format "expected one of %s or a %s but read %s" separators closers id))))))
+
+;; Core Parsing Functions
+;;
 (defun math-p--parse-expression (right-bp)
-  "Parse an expression."
   (math-p--consume-blank-lines)
 
   ;; Since this is the first token in the current expression, we need
@@ -148,7 +185,7 @@
     ;; If the current token does not have a nud function, then we
     ;; cannot parse an expression.
     (if (null nud)
-	`(Error ,(format "expected expression but read '%s'." (math-token-id token)))
+	(math-p--error token (format "expected expression but read '%s'." (math-token-id token)))
 	
       ;; Apply the nud function to get the parsed expression.
       (math-p--advance-token)
@@ -159,7 +196,9 @@
 
   (let ((left-bp (math-token-led-bp math-p--tok)))
     (if (null left-bp)
-	`(Error ,(format "expected an operator but read '%s'." (math-token-id token)))
+	(math-p--error 
+	 math-p--tok 
+	 (format "expected an operator but read '%s'." (math-token-id token)))
 
       (if (< right-bp left-bp)
 
@@ -168,7 +207,7 @@
 		 (led (math-token-led-fn token)))
 
 	    (if (null led)
-		`(Error ,(format "no led function for '%s'." (math-token-id token)))
+		(math-p-error token (format "no led function for '%s'."))
 
 	      ;; Get the next token.
 	      (math-p--advance-token)
@@ -179,46 +218,27 @@
 
 	left-expr))))
 
+;; Parse a Mathematica statement."
 (defun math-p--parse-statement ()
-  "Parse a Mathematica statement."
-
   ;; Discard blank lines.
   (math-p--consume-blank-lines)
 
   ;; Read expressions until we find an eol or eof terminated expression.
   (let ((expressions (list 'expressions)))
-    (while (and (not (equal (math-token-class math-p--tok) :eol))
-		(not (equal (math-token-class math-p--tok) :eof)))
+    (while (math-p--continue-until '(:eol :eof))
       (math-append-to-list expressions (math-p--parse-expression 0))
-      ;; The expression must be terminated by one of: `;' `eol' `eof'.
-      (let ((id (math-token-id math-p--tok)))
-	(cond
-	 ;; Consume the `;'
-	 ((equal id ";") 
-	  (math-p--advance-token))
-	 ;; The eol marker will cause the while loop to terminate.
-	 ((equal id :eol)
-	  t)
-	 ;; The eof marker will cause the while loop to terminate.
-	 ((equal id :eof)
-	  t)
-	 ;; Otherwise, there is a syntax error.
-	 (t
-	  (math-p--advance-token)))))
+      (math-append-to-list expressions (math-p--separators-or-closers ";" '(:eol :eof))))
+    (math-append-to-list expressions (math-p--closers '(:eol :eof)))))
 
-    ;; Discard blank lines.
-    (math-p--consume-blank-lines)
-    expressions))
-
+;; Parse a Mathematica program."
 (defun math-p--parse-program ()
-  "Parse a Mathematica program."
-  
   (math-p--init)
   ;; Read statements until we see the `eof' token.
   (let ((statements (list 'statements)))
-    (while (not (equal (math-token-class math-p--tok) :eof))
-      (math-append-to-list statements (math-p--parse-statement)))
-    statements))
+    (while (math-p--continue-until :eof)
+      (math-append-to-list statements (math-p--parse-statement))
+      (math-p--consume-blank-lines))
+    (math-append-to-list statements (math-p--closers :eof))))
 
 (defun math-parse-buffer ()
   (interactive)

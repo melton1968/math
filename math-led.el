@@ -36,26 +36,23 @@
 ;; requirement: left expression should be a name.
 (defun math-parse-led-sequence (l-expr token)
   (let ((sequence `(,l-expr)))
-    (while (and (not (equal (math-token-id math-p--tok) "]"))
-		(not (equal (math-token-id math-p--tok) :eof)))
-      (let ((expression (math-p--parse-expression 0)))
-	(math-append-to-list sequence expression))
-      (if (equal (math-token-id math-p--tok) ",")
-	  (math-p--expect-separator ",")))
-    (math-p--closer sequence "]")))
+    (while (math-p--continue-until "]")
+      (math-append-to-list sequence (math-p--parse-expression 0))
+      (math-append-to-list sequence (math-p--separators-or-closers "," "]")))
+    (math-append-to-list sequence (math-p--closers "]"))))
 
 ;; Parse `expr1 operator expr2 ...' --> (operator expr1 expr2 ...)
 ;; token: operator
 ;;
 ;; This is used to parse flat operators, i.e. operators that have a
 ;; variable number of expressions.
-(defun math-parse-led-flat (l-expr token)
-  (let ((r-expr (math-p--parse-expression (math-token-led-bp token))))
-    (let ((expressions `(,(math-token-led-name token) ,l-expr ,r-expr)))
-      (while (equal (math-token-id math-p--tok) (math-token-id token))
-	(math-p--advance-token)
-	(math-append-to-list expressions (math-p--parse-expression (math-token-led-bp token))))
-      expressions)))
+;; (defun math-parse-led-flat (l-expr token)
+;;   (let ((r-expr (math-p--parse-expression (math-token-led-bp token))))
+;;     (let ((expressions `(,(math-token-led-name token) ,l-expr ,r-expr)))
+;;       (while (equal (math-token-id math-p--tok) (math-token-id token))
+;; 	(math-p--advance-token)
+;; 	(math-append-to-list expressions (math-p--parse-expression (math-token-led-bp token))))
+;;       expressions)))
 
 ;; Parse `expr1 operator' --> (operator expr1)
 ;; token: operator
