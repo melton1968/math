@@ -17,6 +17,13 @@
     map)
   "Keymap for `math-mode'.")
 
+(defconst math-indent-list 
+  (list 
+   (math-link :comment-first :comment-start 0 t)
+   (math-link :comment-text :comment-start +3 t)
+   (math-link :comment-last :comment-start +1 t)
+   ))
+
 (define-derived-mode math-mode prog-mode "Math"
   "Major mode for editing Mathmatica code.
 

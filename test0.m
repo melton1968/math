@@ -1,3 +1,6 @@
-{ 1, 2, 3 }
 
+
+(***
+   A comment.
+ ***)
 FooBar[a, b, c];

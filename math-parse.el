@@ -237,7 +237,7 @@
     (math-append-to-list expressions (math-p--closers '(:eol :eof)))))
 
 ;; Parse a Mathematica program."
-(defun math-p--parse-program ()
+(defun math-parse-program ()
   (math-p--init)
   ;; Read statements until we see the `eof' token.
   (let ((statements (list 'statements)))
@@ -251,7 +251,7 @@
   (save-excursion
     (goto-char (point-min))
     (with-output-to-temp-buffer "*math-p--output*"
-      (pp (math-p--parse-program)))))
+      (pp (math-parse-program)))))
 
 (defun math-parse-region (begin end)
   (interactive "r")
@@ -265,6 +265,6 @@
 	  (princ input)
 	  (princ "\n\n")
 	  (princ "Parse:\n\n")
-	  (pp (math-p--parse-program)))))))
+	  (pp (math-parse-program)))))))
 
 (provide 'math-parse)
