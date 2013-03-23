@@ -115,7 +115,7 @@
 ;; state to stopped. `token' caused an error described by `msg'.
 (defun math-p--error (token msg)
   (setq math-p--parsing nil)
-  `(Error ,msg))
+  `(Error ,msg ,token))
 
 ;; Append the error returned by `math-p--error' to the given `expr'.
 (defun math-p--error-append (expr token msg)
@@ -190,7 +190,9 @@
       ;; Apply the nud function to get the parsed expression.
       (math-p--advance-token)
       (let ((expression (funcall nud token)))
-	(math-p--parse-expression-led expression right-bp)))))
+	(if math-p--parsing
+	    (math-p--parse-expression-led expression right-bp)
+	  expression)))))
 
 (defun math-p--parse-expression-led (left-expr right-bp)
 
@@ -198,25 +200,29 @@
     (if (null left-bp)
 	(math-p--error 
 	 math-p--tok 
-	 (format "expected an operator but read '%s'." (math-token-id token)))
+	 (format "expected an operator after '%s' but read '%s'" 
+		 left-expr
+		 (math-token-source math-p--tok)))
 
-      (if (< right-bp left-bp)
+      (if (not (< right-bp left-bp))
+	  ;; If the left-bp is not greater than the right, return the
+	  ;; left expression
+	  left-expr
 
-	  ;; Get the led function for parsing the current token.
-	  (let* ((token math-p--tok)
-		 (led (math-token-led-fn token)))
-
-	    (if (null led)
-		(math-p-error token (format "no led function for '%s'."))
-
-	      ;; Get the next token.
-	      (math-p--advance-token)
-      
-	      ;; Apply the led function to get the parsed sub-expression.
-	      (let ((expression (funcall led left-expr token)))
-		(math-p--parse-expression-led expression right-bp))))
-
-	left-expr))))
+	;; Otherwise, apply the operator.
+	;; Get the led function for parsing the current token.
+	(let* ((token math-p--tok)
+	       (led (math-token-led-fn token)))
+	  
+	  (if (null led)
+	      (math-p-error token (format "no led function for '%s'."))
+	    
+	    ;; Get the next token.
+	    (math-p--advance-token)
+	    
+	    ;; Apply the led function to get the parsed sub-expression.
+	    (let ((expression (funcall led left-expr token)))
+	      (math-p--parse-expression-led expression right-bp))))))))
 
 ;; Parse a Mathematica statement."
 (defun math-p--parse-statement ()
