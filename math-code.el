@@ -17,6 +17,7 @@
       (message "%s" pt)
       pt)))
 
-
+(defun math-c--errors-p (tree)
+  (math-apply-tree (lambda (tree) (if (equal 'Error (car tree)) `(,tree) nil)) tree))
 
 (provide 'math-code)
