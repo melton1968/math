@@ -7,4 +7,23 @@ list."
   (if elem (setcdr (last list) (cons elem nil)))
   list)
 
+(defun math-apply-tree (function tree)
+  (cond
+   ((listp tree)
+    (let ((result (funcall function (car tree))))
+      (dolist (elem (cdr tree) result)
+	(setq result (append (math-apply-tree function elem) result)))))
+   (t nil)))
+
+(defun walk2 (match tree)
+  (cond
+   ((listp tree)
+    (if (equal match (car tree))
+	`(,tree)
+      (let ((result nil))
+	(dolist (elem (cdr tree) result)
+	  (setq result (append (walk match elem) result))))))
+   (t nil)))
+
+      
 (provide 'math-util)
