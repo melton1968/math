@@ -19,6 +19,7 @@
 
 (defconst math-indent-list 
   (list 
+   (math-link :statement :bol 0 t)
    (math-link :comment-first :comment-start 0 t)
    (math-link :comment-text :comment-start +3 t)
    (math-link :comment-last :comment-start +1 t)

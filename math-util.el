@@ -15,14 +15,9 @@ list."
 	(setq result (append (math-apply-tree function elem) result)))))
    (t nil)))
 
-;; (defun walk2 (match tree)
-;;   (cond
-;;    ((listp tree)
-;;     (if (equal match (car tree))
-;; 	`(,tree)
-;;       (let ((result nil))
-;; 	(dolist (elem (cdr tree) result)
-;; 	  (setq result (append (walk2 match elem) result))))))
-;;    (t nil)))
-      
+(defun math-match-tree (operator tree)
+  (math-apply-tree (lambda (tree) (if (equal operator (car tree)) `(,tree) nil)) tree))
+
+(defun math-invert-tree (tree) tree)
+
 (provide 'math-util)

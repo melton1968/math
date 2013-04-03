@@ -14,7 +14,7 @@ mxMakeInterval::badarg = "The expression `` is not a relational operator (Inequa
    x <  a
    nx <= a 
  *) 
-mxMakeInterval[(rop:(Less|LessEqual))[var_, value_]] :=
+mxMakeInterval[(rop:(Less|LessEqual))[var_, value_]] := 
     mxInterval[LessEqual, -\[Infinity], value, rop];
 
 (*** 
